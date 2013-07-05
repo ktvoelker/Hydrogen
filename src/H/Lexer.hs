@@ -1,5 +1,5 @@
 
-module H.Lexer (LexerSpec(..), tokenize) where
+module H.Lexer (Token(..), Literal(..), IdClass, LexerSpec(..), tokenize) where
 
 import Text.Parsec hiding ((<|>), many, optional)
 import Text.Parsec.String
@@ -40,13 +40,10 @@ data LexerSpec a =
   , sComments    :: CommentSpec
   } deriving (Eq, Ord, Show)
 
-data EscapeMode = EscapeBackslash | EscapeDouble deriving (Eq, Ord, Show)
-
 data StringSpec =
   StringSpec
   { sStringDelim :: Maybe Char
   , sCharDelim   :: Maybe Char
-  , sEscape      :: EscapeMode
   , sInterpolate :: Maybe (String, String)
   } deriving (Eq, Ord, Show)
 
@@ -127,7 +124,6 @@ litInt True xs = do
   signFunc <- sign xs
   fmap (Literal . LitInt . signFunc . read) $ many1 digit
 
--- TODO support negatives
 litFloat :: Bool -> Maybe String -> Parser (Token a)
 litFloat False _ = mzero
 litFloat True xs = do
@@ -174,9 +170,12 @@ escapeCodes =
     , ('\'', '\''), ('\\', '\\')
     ]
 
--- TODO support EscapeMode and Interpolation
-charContent :: EscapeMode -> Maybe (String, String) -> Char -> Parser Char
-charContent _ _ quote = (char '\\' >> escape) <|> normal
+-- TODO support interpolation
+-- 1. Allow escaping of the interpolation delimiters
+-- 2. Result type of Parser (Either [(Token, SourcePos)] Char)
+--    a. Inside interpolation, parse arbitrary tokens until the delimiter is reached
+charContent :: Maybe (String, String) -> Char -> Parser Char
+charContent _ quote = (char '\\' >> escape) <|> normal
   where
     escape = foldr (<|>) (unicode <|> octal) escapeCodes
     unicode = do
@@ -193,19 +192,19 @@ charContent _ _ quote = (char '\\' >> escape) <|> normal
 
 litString :: StringSpec -> Parser (Token a)
 litString StringSpec{sStringDelim = Nothing} = mzero
-litString StringSpec{sStringDelim = Just quote, sEscape, sInterpolate} =
+litString StringSpec{sStringDelim = Just quote, sInterpolate} =
   fmap (Literal . LitString)
   . between q q
   . many
-  . charContent sEscape sInterpolate
+  . charContent sInterpolate
   $ quote
   where
     q = char quote
 
 litChar :: StringSpec -> Parser (Token a)
 litChar StringSpec{sCharDelim = Nothing} = mzero
-litChar StringSpec{sCharDelim = Just quote, sEscape} =
-  fmap (Literal . LitChar) . between q q . charContent sEscape Nothing $ quote
+litChar StringSpec{sCharDelim = Just quote} =
+  fmap (Literal . LitChar) . between q q . charContent Nothing $ quote
   where
     q = char quote
 
