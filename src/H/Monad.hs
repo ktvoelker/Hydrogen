@@ -1,86 +1,133 @@
 
+{-# LANGUAGE UndecidableInstances #-}
 module H.Monad
   ( ErrType(..)
   , Err(..)
   , fatal
   , report
   , internal
-  , FM()
-  , nextUnique
-  , runFM
+  , log
+  , Result(..)
+  , writeResults
+  , writeResult
+  , isArtifact
+  , MT()
+  , MonadUnique(..)
+  , runMT
   ) where
 
-import Control.Monad.Writer
 import Text.Parsec.Pos (SourcePos())
+import System.IO
 
 import H.Import
 import H.Util
 
-data ErrType =
-    EUnknown | ELexer | EParser | EInternal | EUnbound | ECircRef
-  | EFixityMismatch | EOrphanFixity
-  deriving (Eq, Ord, Enum, Bounded, Show)
+data MTState =
+  MTState
+  { mtNextUnique :: Integer
+  }
 
-data Err =
+emptyMTState = MTState 0
+
+newtype MT e m a =
+  MT { getMT :: ErrorT (Err e) (StateT MTState (WriterT [Result e] m)) a }
+
+data ErrType e = EUnknown | EInternal | ELexer | EParser | EOutput | ECustom e
+  deriving (Eq, Ord, Show)
+
+instance (Bounded e) => Bounded (ErrType e) where
+  minBound = EUnknown
+  maxBound = ECustom maxBound
+
+instance (Enum e) => Enum (ErrType e) where
+  toEnum 0 = EUnknown
+  toEnum 1 = EInternal
+  toEnum 2 = ELexer
+  toEnum 3 = EParser
+  toEnum 4 = EOutput
+  toEnum n = ECustom $ toEnum $ n - 5
+  fromEnum EUnknown = 0
+  fromEnum EInternal = 1
+  fromEnum ELexer = 2
+  fromEnum EParser = 3
+  fromEnum EOutput = 4
+  fromEnum (ECustom e) = fromEnum e + 5
+
+data Err e =
   Err
-  { errType      :: ErrType
+  { errType      :: ErrType e
   , errSourcePos :: Maybe SourcePos
   , errName      :: Maybe String
   , errMore      :: Maybe String
   } deriving (Show)
 
-data FMState =
-  FMState
-  { fmNextUnique :: Integer
-  }
+instance Error (Err e) where
+  noMsg  = Err EUnknown Nothing Nothing Nothing
+  strMsg = Err EUnknown Nothing Nothing . Just
 
-emptyFMState = FMState 0
+fatal :: (Monad' m) => Err e -> MT e m a
+fatal err = report err >> MT (throwError err)
 
-newtype FM a = FM { getFM :: StateT FMState (Writer [Err]) (Maybe a) }
+report :: (Monad' m) => Err e -> MT e m ()
+report = MT . tell . (: []) . ErrResult
 
-fatal :: Err -> FM a
-fatal = (>> mzero) . report
-
-report :: Err -> FM ()
-report = tell . (: [])
-
-internal :: (Show a) => a -> FM ()
+internal :: (Monad' m, Show a) => a -> MT e m ()
 internal = report . Err EInternal Nothing Nothing . Just . show
 
-instance Monad FM where
-  return = FM . return . Just
-  (FM m) >>= f = FM $ m >>= maybe (return Nothing) (getFM . f)
-  fail = FM . fail
+log :: (Monad' m) => String -> MT e m ()
+log = report . Err EOutput Nothing Nothing . Just
 
-instance Functor FM where
-  fmap f m = m >>= return . f
+instance (Monad' m) => Monad (MT e m) where
+  return = pure
+  (MT m) >>= f = MT $ m >>= getMT . f
+  fail = MT . fail
 
-instance Applicative FM where
-  pure = return
+instance MonadTrans (MT e) where
+  lift = MT . lift3
+
+instance (Functor m) => Functor (MT e m) where
+  fmap f (MT m) = MT . fmap f $ m
+
+instance (Monad' m) => Applicative (MT e m) where
+  pure = MT . return
   (<*>) = liftM2 ($)
 
-instance MonadPlus FM where
-  mzero = FM $ return Nothing
-  mplus (FM a) (FM b) = FM $ a >>= maybe b (return . Just)
+instance (Monad' m) => MonadError (Err e) (MT e m) where
+  throwError = MT . throwError
+  catchError (MT m) h = MT $ catchError m (getMT . h)
 
-instance MonadWriter [Err] FM where
-  writer = FM . writer . mapFst Just
-  tell = FM . fmap Just . tell
-  listen (FM m) = FM $ listen m >>= uncurry (flip f)
-    where
-      f w = maybe (return Nothing) (return . Just . (,w))
-  pass (FM m) = FM . pass . fmap f $ m
-    where
-      f Nothing = (Nothing, id)
-      f (Just (a, f)) = (Just a, f)
+instance (Monad' m) => MonadWriter [Result e] (MT e m) where
+  listen (MT m) = MT $ listen m
+  pass (MT m) = MT $ pass m
 
-nextUnique :: FM Integer
-nextUnique = FM $ do
-  s <- get
-  let u = fmNextUnique s
-  put $ s { fmNextUnique = u + 1 }
-  return $ Just u
+data Result e =
+    ErrResult (Err e)
+  | DebugResult String
+  | ArtifactResult String String
+  deriving (Show)
 
-runFM :: FM a -> (Maybe a, [Err])
-runFM = runWriter . flip evalStateT emptyFMState . getFM
+writeResults :: (Monad' m, MonadIO m, Show e) => [Result e] -> m ExitCode
+writeResults = fmap mconcat . mapM writeResult
+
+writeResult :: (Monad' m, MonadIO m, Show e) => Result e -> m ExitCode
+writeResult (ErrResult e) = liftIO (hPrint stderr e) >> return ExitFailure
+writeResult (DebugResult xs) = liftIO (hPutStrLn stderr xs) >> return ExitSuccess
+writeResult (ArtifactResult fp xs) = liftIO (writeFile fp xs) >> return ExitSuccess
+
+isArtifact :: Result e -> Bool
+isArtifact (ArtifactResult _ _) = True
+isArtifact _ = False
+
+class (Monad' m) => MonadUnique m where
+  nextUnique :: m Integer
+
+instance (Monad' m) => MonadUnique (MT e m) where
+  nextUnique = MT $ do
+    s <- get
+    let u = mtNextUnique s
+    put $ s { mtNextUnique = u + 1 }
+    return u
+
+runMT :: (Monad' m) => MT e m a -> m (Either (Err e) a, [Result e])
+runMT = runWriterT . flip evalStateT emptyMTState . runErrorT . getMT
 

@@ -53,7 +53,9 @@ data CommentSpec =
   , sBlockComment :: Maybe (String, String, Bool)
   } deriving (Eq, Ord, Show)
 
-tokenize :: (IdClass a) => LexerSpec a -> String -> String -> FM [(Token a, SourcePos)]
+tokenize
+  :: (Monad' m, IdClass a)
+  => LexerSpec a -> String -> String -> MT e m [(Token a, SourcePos)]
 tokenize spec name xs = case parse (file spec) name xs of
   Left err -> fatal . Err ELexer Nothing Nothing . Just . show $ err
   Right ts -> return ts

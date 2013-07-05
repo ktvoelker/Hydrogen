@@ -33,7 +33,9 @@ Library
     data-lens            >= 2.10 && < 2.11,
     data-lens-fd         >= 2.0  && < 2.1,
     data-lens-template   >= 2.1  && < 2.2,
-    template-haskell     >= 2.7  && < 2.9
+    template-haskell     >= 2.7  && < 2.9,
+    cmdtheline           >= 0.2  && < 0.3,
+    pretty               >= 1.1  && < 1.2
   exposed-modules:
     H.Annotation
     H.Common
@@ -46,16 +48,21 @@ Library
     H.Annotation.Internal
     H.Import
     H.Monad
+    H.Phase.CmdLine
+    H.Phase.Types
     H.Util
   default-extensions:
     NoImplicitPrelude
     TupleSections
     LambdaCase
-    MultiParamTypeClasses
-    FlexibleInstances
-    FlexibleContexts
     RecordWildCards
     NamedFieldPuns
+    LiberalTypeSynonyms
+    MultiParamTypeClasses
+    TypeSynonymInstances
+    FlexibleInstances
+    FlexibleContexts
+    StandaloneDeriving
   other-extensions:
     TemplateHaskell
     UndecidableInstances

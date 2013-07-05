@@ -3,6 +3,7 @@ module H.Import
   ( module Control.Applicative
   , module Control.Category
   , module Control.Monad
+  , module Control.Monad.Error
   , module Control.Monad.Identity
   , module Control.Monad.Reader
   , module Control.Monad.State
@@ -24,6 +25,7 @@ module H.Import
 import Control.Applicative
 import Control.Category
 import Control.Monad hiding (forM, mapM, sequence)
+import Control.Monad.Error hiding (forM, mapM, sequence)
 import Control.Monad.Identity hiding (forM, mapM, sequence)
 import Control.Monad.Reader hiding (forM, mapM, sequence)
 import Control.Monad.State hiding (forM, mapM, sequence)
@@ -39,5 +41,5 @@ import Data.Ratio
 import Data.Set (Set())
 import Data.Traversable
 import GHC.Real
-import Prelude hiding ((.), id, mapM, sequence)
+import Prelude hiding ((.), id, log, mapM, sequence)
 

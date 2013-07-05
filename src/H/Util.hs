@@ -1,7 +1,15 @@
 
+{-# LANGUAGE UndecidableInstances #-}
 module H.Util where
 
 import H.Import
+
+data ExitCode = ExitSuccess | ExitFailure deriving (Eq, Ord, Enum, Bounded, Read, Show)
+
+instance Monoid ExitCode where
+  mempty = ExitSuccess
+  mappend ExitSuccess ExitSuccess = ExitSuccess
+  mappend _ _ = ExitFailure
 
 todo :: a
 todo = error "Not implemented"
@@ -79,4 +87,24 @@ minimumByM c (x : xs) = f x c xs
       case o of
         LT -> f x c xs
         _ -> f acc c xs
+
+getInput :: String -> IO String
+getInput xs = case xs of
+  "-" -> getContents
+  _   -> readFile xs
+ 
+data Proxy a = Proxy
+
+asProxied :: a -> Proxy a -> a
+asProxied = const
+
+infix 8 `asProxied`
+
+class (Functor m, Applicative m) => Applicative' m where
+
+class (Applicative' m, Monad m) => Monad' m where
+
+instance (Functor m, Applicative m) => Applicative' m where
+
+instance (Applicative' m, Monad m) => Monad' m where
 
