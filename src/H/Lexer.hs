@@ -1,23 +1,62 @@
 
 module H.Lexer (LexerSpec(..), tokenize) where
 
-import qualified Data.Map as M
 import Text.Parsec hiding ((<|>), many, optional)
 import Text.Parsec.String
 
 import H.Common
 
+data Token a =
+    Delimiter Bool (String, String)
+  | Separator String
+  | Terminator String
+  | Keyword String
+  | Identifier a String
+  | Literal Literal
+  deriving (Eq, Ord, Show)
+
+data Literal =
+    LitString String
+  | LitChar Char
+  | LitInt Integer
+  | LitFloat Rational
+  | LitBool Bool
+  deriving (Eq, Ord, Show)
+
+class (Eq a, Ord a, Enum a, Bounded a, Show a) => IdClass a where
+
 data LexerSpec a =
   LexerSpec
-  { sKeywords :: [(String, a)]
-  , sIntegers :: Maybe (Integer -> a)
-  , sFloats   :: Maybe (Rational -> a)
-  , sStrings  :: Maybe (String -> a)
-  , sChars    :: Maybe (Char -> a)
-  , sIdents   :: [([([Char], Integer, Maybe Integer)], String -> a)]
-  }
+  { sDelimiters  :: [(String, String)]
+  , sSeparators  :: [String]
+  , sTerminators :: [String]
+  , sKeywords    :: [String]
+  , sIdentifiers :: [(a, [Char], [Char])]
+  , sStrings     :: StringSpec
+  , sInts        :: Bool
+  , sNegative    :: Maybe String
+  , sFloats      :: Bool
+  , sBools       :: Maybe (String, String)
+  , sComments    :: CommentSpec
+  } deriving (Eq, Ord, Show)
 
-tokenize :: LexerSpec a -> String -> String -> FM [(a, SourcePos)]
+data EscapeMode = EscapeBackslash | EscapeDouble deriving (Eq, Ord, Show)
+
+data StringSpec =
+  StringSpec
+  { sStringDelim :: Maybe Char
+  , sCharDelim   :: Maybe Char
+  , sEscape      :: EscapeMode
+  , sInterpolate :: Maybe (String, String)
+  } deriving (Eq, Ord, Show)
+
+data CommentSpec =
+  CommentSpec
+  { sLineComment  :: Maybe String
+  , sBlockComment :: Maybe (String, String, Bool)
+  } deriving (Eq, Ord, Show)
+
+tokenize :: (IdClass a) => LexerSpec a -> String -> String -> FM [(Token a, SourcePos)]
 tokenize spec name xs = case parse (file spec) name xs of
   Left err -> fatal . Err ELexer Nothing Nothing . Just . show $ err
   Right ts -> return ts
@@ -27,63 +66,81 @@ withPos parser = do
   ret <- parser
   return (ret, pos)
 
-file :: LexerSpec a -> Parser [(a, SourcePos)]
+file :: (IdClass a) => LexerSpec a -> Parser [(Token a, SourcePos)]
 file spec = do
-  skippable
-  xs <- many1 (withPos $ tok spec) `sepEndBy` skippable
+  sk
+  xs <- many1 (withPos $ tok spec) `sepEndBy` sk
   eof
   return . concat $ xs
+  where
+    sk = skippable $ sComments spec
 
-skippable = void . optional . many1 $ comment <|> (space >> return ())
+skippable :: CommentSpec -> Parser ()
+skippable cs = void . optional . many1 $ comment cs <|> (space >> return ())
 
 tok spec =
   choice
-  [ keywords (sKeywords spec)
-  , ident (sIdents spec)
-  , litInt (sIntegers spec)
-  , litFloat (sFloats spec)
+  [ delimiters (sDelimiters spec)
+  , separators (sSeparators spec)
+  , terminators (sTerminators spec)
+  , keywords (sKeywords spec)
+  , ident (sIdentifiers spec)
+  , litInt (sInts spec) (sNegative spec)
+  , litFloat (sFloats spec) (sNegative spec)
   , litString (sStrings spec)
-  , litChar (sChars spec)
+  , litChar (sStrings spec)
+  , litBool (sBools spec)
   ]
 
-keywords xs = choice . map p . map fst $ xs
-  where
-    m = M.fromList xs
-    p kw = do
-      void $ try $ string kw
-      Just tok <- return $ M.lookup kw m
-      return tok
+delimiters :: [(String, String)] -> Parser (Token a)
+delimiters = choice . map oneDelimPair
 
+oneDelimPair :: (String, String) -> Parser (Token a)
+oneDelimPair pair@(left, right) =
+  choice
+  [ string left  >> return (Delimiter False pair)
+  , string right >> return (Delimiter True pair)
+  ]
+
+separators :: [String] -> Parser (Token a)
+separators = choice . map (fmap Separator . string)
+
+terminators :: [String] -> Parser (Token a)
+terminators = choice . map (fmap Terminator . string)
+
+keywords :: [String] -> Parser (Token a)
+keywords = fmap Keyword . choice . map (try . string)
+
+ident :: (IdClass a) => [(a, String, String)] -> Parser (Token a)
 ident = choice . map oneIdent
 
-oneIdent :: ([([Char], Integer, Maybe Integer)], String -> a) -> Parser a
-oneIdent (parts, maker) = sequence (map identPart parts) >>= return . maker . concat
+oneIdent :: (IdClass a) => (a, String, String) -> Parser (Token a)
+oneIdent (cls, head, tail) =
+  (Identifier cls .) . (:) <$> oneOf head <*> many (oneOf tail)
 
-range :: Integer -> Maybe Integer -> Parser a -> Parser [a]
-range minCount maxCount parser = do
-  xs <- count (fromInteger minCount) parser
-  ys <- maybe (many parser) undefined maxCount
-  return $ xs ++ ys
+sign :: (Num a) => Maybe String -> Parser (a -> a)
+sign = maybe (return id) $ option id . (>> return negate) . string
 
-identPart :: ([Char], Integer, Maybe Integer) -> Parser String
-identPart (chars, minCount, maxCount) =
-  range minCount maxCount $ choice (map char chars)
+litInt :: Bool -> Maybe String -> Parser (Token a)
+litInt False _ = mzero
+litInt True xs = do
+  signFunc <- sign xs
+  fmap (Literal . LitInt . signFunc . read) $ many1 digit
 
-litInt Nothing = mzero
-litInt (Just spec) = many1 digit >>= return . spec . read
-
-litFloat Nothing = mzero
-litFloat (Just spec) = do
+-- TODO support negatives
+litFloat :: Bool -> Maybe String -> Parser (Token a)
+litFloat False _ = mzero
+litFloat True xs = do
+  mainSignFunc <- sign xs
   (intPart, fracPart) <- withIntPart <|> withoutIntPart
   exp <- optionMaybe $ do
     _ <- oneOf "eE"
-    sign <- optionMaybe $ oneOf "+-"
-    let signVal = if sign == Just '-' then -1 else 1
+    expSignFunc <- sign xs
     digs <- many1 digit
-    return $ (signVal * read digs :: Integer)
-  let intVal = read intPart :: Integer
+    return $ (expSignFunc . read $ digs :: Integer)
+  let intVal = mainSignFunc . read $ intPart :: Integer
   let fracVal = (read fracPart :: Integer) % (10 ^ length fracPart)
-  return . spec $ (fromInteger intVal + fracVal) * (10 ^ maybe 0 id exp)
+  return . Literal . LitFloat $ (fromInteger intVal + fracVal) * (10 ^ maybe 0 id exp)
   where
     withIntPart = do
       intPart <- many1 digit
@@ -95,21 +152,31 @@ litFloat (Just spec) = do
       fracPart <- many1 digit
       return ("0", fracPart)
 
--- TODO better comment syntax, with nestable block comments
-comment :: Parser ()
-comment = do
-  _ <- string "//"
+comment :: CommentSpec -> Parser ()
+comment CommentSpec{..} = lineComment sLineComment <|> blockComment sBlockComment
+
+lineComment :: Maybe String -> Parser ()
+lineComment Nothing = mzero
+lineComment (Just begin) = do
+  _ <- string begin
   _ <- many . noneOf $ "\n\r"
   void . optional . char $ '\r'
   (char '\n' >> return ()) <|> eof
 
+blockComment :: Maybe (String, String, Bool) -> Parser ()
+blockComment Nothing = mzero
+blockComment (Just (_, _, _)) = undefined
+
+escapeCodes :: [Parser Char]
 escapeCodes =
   map (\(e, r) -> (char e :: Parser Char) >> return r)
     [ ('b', '\b'), ('t', '\t'), ('n', '\n'), ('f', '\f'), ('r', '\r'), ('"', '"')
     , ('\'', '\''), ('\\', '\\')
     ]
 
-charContent quote = (char '\\' >> escape) <|> normal
+-- TODO support EscapeMode and Interpolation
+charContent :: EscapeMode -> Maybe (String, String) -> Char -> Parser Char
+charContent _ _ quote = (char '\\' >> escape) <|> normal
   where
     escape = foldr (<|>) (unicode <|> octal) escapeCodes
     unicode = do
@@ -124,11 +191,30 @@ charContent quote = (char '\\' >> escape) <|> normal
     normal = noneOf [quote, '\\']
     readDigit = read . (: [])
 
-litString Nothing = mzero
-litString (Just spec) =
-  let q = char '"' in fmap spec . between q q . many . charContent $ '"'
+litString :: StringSpec -> Parser (Token a)
+litString StringSpec{sStringDelim = Nothing} = mzero
+litString StringSpec{sStringDelim = Just quote, sEscape, sInterpolate} =
+  fmap (Literal . LitString)
+  . between q q
+  . many
+  . charContent sEscape sInterpolate
+  $ quote
+  where
+    q = char quote
 
-litChar Nothing = mzero
-litChar (Just spec) =
-  let q = char '\'' in fmap spec . between q q . charContent $ '\''
+litChar :: StringSpec -> Parser (Token a)
+litChar StringSpec{sCharDelim = Nothing} = mzero
+litChar StringSpec{sCharDelim = Just quote, sEscape} =
+  fmap (Literal . LitChar) . between q q . charContent sEscape Nothing $ quote
+  where
+    q = char quote
+
+litBool :: Maybe (String, String) -> Parser (Token a)
+litBool Nothing = mzero
+litBool (Just (false, true)) =
+  fmap (Literal . LitBool)
+  $ choice
+    [ string false >> return False
+    , string true  >> return True
+    ]
 

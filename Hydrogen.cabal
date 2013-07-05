@@ -54,6 +54,8 @@ Library
     MultiParamTypeClasses
     FlexibleInstances
     FlexibleContexts
+    RecordWildCards
+    NamedFieldPuns
   other-extensions:
     TemplateHaskell
     UndecidableInstances
