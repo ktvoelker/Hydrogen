@@ -2,12 +2,6 @@
 TODO
 ====
 
-Change the top-level runner code
-
-  If the user code doesn't use IO, that shouldn't be a problem
-
-  If the user code doesn't return (), that shouldn't be a problem
-
 Finish porting FLang over to Hydrogen
 
 Switch to strict IO, somehow (perhaps conduit?)

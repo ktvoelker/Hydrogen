@@ -22,37 +22,41 @@ data InputFile =
   } deriving (Eq, Ord, Show)
 
 argMain
-  :: (Show e, StageNames n, Monad' m, MonadIO m)
-  => Pipeline n e m [InputFile] b  -- ^ The pipeline
-  -> n                             -- ^ The name of the final phase to run
-  -> [n]                           -- ^ The names of phases whose output to dump
-  -> [String]                      -- ^ The names of the input files
-  -> m ()
-argMain p f ds inputs = do
-  files <- liftIO $ mapM (\name -> InputFile name <$> readFile name) inputs
-  execPipelineIO p f (S.fromList ds) files >>= exitWith
+  :: (Show e, StageNames n, Monad' m)
+  => (forall a. m a -> IO a)        -- ^ The runner for the user monad
+  -> Pipeline n e m [InputFile] ()  -- ^ The pipeline
+  -> n                              -- ^ The name of the final phase to run
+  -> [n]                            -- ^ The names of phases whose output to dump
+  -> [String]                       -- ^ The names of the input files
+  -> IO ()
+argMain r p f ds inputs =
+  mapM (\name -> InputFile name <$> readFile name) inputs
+    >>= r . execPipeline p f (S.fromList ds)
+    >>= writeResults
+    >>= exitWith
 
-data MainOptions n e m b =
+data MainOptions n e m =
   MainOptions
-  { moPipeline :: Pipeline n e m [InputFile] b
+  { moPipeline :: Pipeline n e m [InputFile] ()
   , moName     :: String
   , moVersion  :: String
-  , moRunMonad :: m () -> IO ()
+  , moRunMonad :: forall a. m a -> IO a
   }
 
 termMain
-  :: (StageNames n, Show e, Show b, Monad' m, MonadIO m)
-  => Pipeline n e m [InputFile] b
-  -> Term (m ())
-termMain p = argMain p <$> CL.phase <*> CL.dump <*> CL.inputs
+  :: (StageNames n, Show e, Monad' m)
+  => (forall a. m a -> IO a)
+  -> Pipeline n e m [InputFile] ()
+  -> Term (IO ())
+termMain r p = argMain r p <$> CL.phase <*> CL.dump <*> CL.inputs
 
 phasedMain
-  :: (StageNames n, Show e, Show b, Monad' m, MonadIO m)
-  => MainOptions n e m b
+  :: (StageNames n, Show e, Monad' m)
+  => MainOptions n e m
   -> IO ()
 phasedMain MainOptions{..} =
   run
-    ( moRunMonad <$> termMain moPipeline
+    ( termMain moRunMonad moPipeline
     , defTI { termName = moName, version = moVersion }
     )
 

@@ -6,10 +6,8 @@ module H.Phase.Types
   , Pipeline()
   , stage
   , execPipeline
-  , execPipelineIO
   , evalPipeline
   , runPipeline
-  , runPipelineIO
   ) where
 
 import Control.Monad.Error
@@ -88,15 +86,6 @@ execPipeline
 execPipeline (Pipeline trans) final debugs =
   liftM snd . runPM (Options (Just final) debugs) . trans
 
-execPipelineIO
-  :: (Show e, Monad' m, MonadIO m)
-  => Pipeline n e m a b
-  -> n
-  -> S.Set n
-  -> a
-  -> m ExitCode
-execPipelineIO p f d = execPipeline p f d >=> writeResults
-
 evalPipeline
   :: (Monad' m)
   => Pipeline n e m a b
@@ -113,12 +102,4 @@ runPipeline
   -> m (b, [Result e])
 runPipeline (Pipeline trans) debugs =
   liftM (\(a, w) -> (fromJust a, w)) . runPM (Options Nothing debugs) . trans
-
-runPipelineIO
-  :: (Show e, Monad' m, MonadIO m)
-  => Pipeline n e m a b
-  -> S.Set n
-  -> a
-  -> m (b, ExitCode)
-runPipelineIO p d = runPipeline p d >=> \(a, w) -> (a,) <$> writeResults w
 
