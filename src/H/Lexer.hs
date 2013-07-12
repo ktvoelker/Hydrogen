@@ -1,5 +1,13 @@
 
-module H.Lexer (Token(..), Literal(..), IdClass, LexerSpec(..), tokenize) where
+module H.Lexer
+  ( Token(..)
+  , Literal(..)
+  , IdClass
+  , LexerSpec(..)
+  , StringSpec(..)
+  , CommentSpec(..)
+  , tokenize
+  ) where
 
 import Text.Parsec hiding ((<|>), many, optional)
 import Text.Parsec.String

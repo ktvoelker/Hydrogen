@@ -1,7 +1,8 @@
 
 module H.Phase
   ( InputFile(..)
-  , main
+  , MainOptions(..)
+  , phasedMain
   , module H.Phase.Types
   ) where
 
@@ -45,11 +46,11 @@ termMain
   -> Term (m ())
 termMain p = argMain p <$> CL.phase <*> CL.dump <*> CL.inputs
 
-main
+phasedMain
   :: (StageNames n, Show e, Show b, Monad' m, MonadIO m)
   => MainOptions n e m b
   -> IO ()
-main MainOptions{..} =
+phasedMain MainOptions{..} =
   run
     ( moRunMonad <$> termMain moPipeline
     , defTI { termName = moName, version = moVersion }
