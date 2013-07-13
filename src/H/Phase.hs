@@ -3,7 +3,7 @@ module H.Phase
   ( InputFile(..)
   , MainOptions(..)
   , phasedMain
-  , module H.Phase.Types
+  , module H.Monad
   ) where
 
 import qualified Data.Set as S
@@ -12,8 +12,8 @@ import System.IO
 
 import H.Common
 import H.Common.IO
+import H.Monad
 import qualified H.Phase.CmdLine as CL
-import H.Phase.Types
 
 data InputFile =
   InputFile
@@ -24,20 +24,20 @@ data InputFile =
 argMain
   :: (Show e, StageNames n, Monad' m)
   => (forall a. m a -> IO a)        -- ^ The runner for the user monad
-  -> Pipeline n e m [InputFile] ()  -- ^ The pipeline
+  -> ([InputFile] -> MT n e m ())   -- ^ The pipeline
   -> n                              -- ^ The name of the final phase to run
   -> [n]                            -- ^ The names of phases whose output to dump
   -> [String]                       -- ^ The names of the input files
   -> IO ()
 argMain r p f ds inputs =
   mapM (\name -> InputFile name <$> readFile name) inputs
-    >>= r . execPipeline p f (S.fromList ds)
+    >>= r . execMT (Options (Just f) (S.fromList ds)) . p
     >>= writeResults
     >>= exitWith
 
 data MainOptions n e m =
   MainOptions
-  { moPipeline :: Pipeline n e m [InputFile] ()
+  { moPipeline :: [InputFile] -> MT n e m ()
   , moName     :: String
   , moVersion  :: String
   , moRunMonad :: forall a. m a -> IO a
@@ -46,7 +46,7 @@ data MainOptions n e m =
 termMain
   :: (StageNames n, Show e, Monad' m)
   => (forall a. m a -> IO a)
-  -> Pipeline n e m [InputFile] ()
+  -> ([InputFile] -> MT n e m ())
   -> Term (IO ())
 termMain r p = argMain r p <$> CL.phase <*> CL.dump <*> CL.inputs
 

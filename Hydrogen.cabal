@@ -49,7 +49,6 @@ Library
     H.Import
     H.Monad
     H.Phase.CmdLine
-    H.Phase.Types
     H.Util
   default-extensions:
     NoImplicitPrelude

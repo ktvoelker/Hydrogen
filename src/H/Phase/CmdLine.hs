@@ -6,7 +6,6 @@ import System.Console.CmdTheLine
 import Text.PrettyPrint
 
 import H.Common
-import H.Phase.Types
 
 inputs :: Term [String]
 inputs =

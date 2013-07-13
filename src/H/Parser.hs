@@ -16,7 +16,7 @@ parse
   => Parser a b
   -> String
   -> [(a, SourcePos)]
-  -> MT e m b
+  -> MT n e m b
 parse file name xs = case P.parse file name xs of
   Left err -> fatal . Err EParser Nothing Nothing . Just . show $ err
   Right decl -> return decl

@@ -44,6 +44,20 @@ lift3
   -> v (t (u m)) a
 lift3 = lift . lift . lift
 
+lift4
+  :: ( MonadTrans t
+     , MonadTrans u
+     , MonadTrans v
+     , MonadTrans w
+     , Monad m
+     , Monad (u m)
+     , Monad (t (u m))
+     , Monad (v (t (u m)))
+     )
+  => m a
+  -> w (v (t (u m))) a
+lift4 = lift . lift . lift . lift
+
 modifyM :: (MonadState s m) => (s -> m s) -> m ()
 modifyM = (>>= put) . (get >>=) 
 

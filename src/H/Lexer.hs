@@ -63,7 +63,7 @@ data CommentSpec =
 
 tokenize
   :: (Monad' m, IdClass a)
-  => LexerSpec a -> String -> String -> MT e m [(Token a, SourcePos)]
+  => LexerSpec a -> String -> String -> MT n e m [(Token a, SourcePos)]
 tokenize spec name xs = case parse (file spec) name xs of
   Left err -> fatal . Err ELexer Nothing Nothing . Just . show $ err
   Right ts -> return ts
