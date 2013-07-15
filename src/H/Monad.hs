@@ -8,7 +8,6 @@ module H.Monad
   , internal
   , log
   , dump
-  , dumpResult
   , artifact
   , Options(..)
   , Result(..)
@@ -45,14 +44,13 @@ data MTState =
 
 emptyMTState = MTState 0
 
-newtype MT n e m a =
-  MT
-  { getMT
-    :: ReaderT (Options n)
-       (ErrorT (Either (Err e) (Finished n))
-       (StateT MTState
-       (WriterT [Result e] m))) a
-  }
+type MTInner n e m =
+  ReaderT (Options n)
+  (ErrorT (Either (Err e) (Finished n))
+  (StateT MTState
+  (WriterT [Result e] m)))
+
+newtype MT n e m a = MT { getMT :: MTInner n e m a }
 
 newtype Finished n = Finished n deriving (Eq, Ord, Show)
 
@@ -106,12 +104,15 @@ log :: (MonadM m) => String -> m ()
 log = report . Err EOutput Nothing Nothing . Just
 
 dump :: (MonadM m) => String -> m ()
-dump = liftMT . MT . tell . (: []) . DebugResult
+dump = liftMT . MT . dump'
 
-dumpResult :: (MonadM m, Show a) => m a -> m a
-dumpResult m = do
+dump' :: (Monad m) => String -> MTInner n e m ()
+dump' = tell . (: []) . DebugResult
+
+dumpResult' :: (Monad m, Show a) => MTInner n e m a -> MTInner n e m a
+dumpResult' m = do
   r <- m
-  dump . show $ r
+  dump' . show $ r
   return r
 
 artifact :: (MonadM m) => String -> String -> m ()
@@ -202,14 +203,14 @@ execMT :: (Monad m) => Options n -> MT n e m a -> m [Result e]
 execMT = (liftM snd .) . runMT
 
 stage
-  :: (Monad m, StageNames n)
+  :: (Monad m, StageNames n, Show a)
   => n
-  -> MT n e m b
-  -> MT n e m b
+  -> MT n e m a
+  -> MT n e m a
 stage name (MT m) = MT $ do
   Options{..} <- ask
   let c = if name `S.member` debugStages then id else filter isArtifact
-  output <- censor c m
+  output <- censor c . dumpResult' $ m
   when (Just name == finalStage) . throwError . Right . Finished $ name
   return output
 
