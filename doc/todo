@@ -8,3 +8,5 @@ Switch to strict IO, somehow (perhaps conduit?)
 
 Switch from String to Text (and system-filepath)
 
+  But use Doc for all error output (is there a doc-text package?)
+

@@ -12,7 +12,7 @@ instance MonadSourcePos (Parser a) where
   getSourcePos = getPosition
 
 parse
-  :: (Monad' m)
+  :: (Applicative m, Monad m)
   => Parser a b
   -> String
   -> [(a, SourcePos)]

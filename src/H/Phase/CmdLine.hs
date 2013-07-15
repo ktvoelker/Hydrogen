@@ -31,8 +31,15 @@ deriving instance (Ord n) => Ord (PhaseArg n)
 instance (StageNames n) => ArgVal (PhaseArg n) where
   converter = (parser, printer)
     where
-      parser  = maybe (Left undefined) (Right . PhaseArg) . flip M.lookup phases
+      parser xs =
+        maybe (Left . badPhase $ xs) (Right . PhaseArg)
+        . flip M.lookup phases
+        . map toLower
+        $ xs
       printer = text . showStageName . getStageName
+
+badPhase :: String -> Doc
+badPhase name = text $ "Unknown phase: " ++ name
 
 dump :: (StageNames n) => Term [n]
 dump =

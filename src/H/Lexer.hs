@@ -62,7 +62,7 @@ data CommentSpec =
   } deriving (Eq, Ord, Show)
 
 tokenize
-  :: (Monad' m, IdClass a)
+  :: (Applicative m, Monad m, IdClass a)
   => LexerSpec a -> String -> String -> MT n e m [(Token a, SourcePos)]
 tokenize spec name xs = case parse (file spec) name xs of
   Left err -> fatal . Err ELexer Nothing Nothing . Just . show $ err
@@ -171,7 +171,8 @@ lineComment (Just begin) = do
 
 blockComment :: Maybe (String, String, Bool) -> Parser ()
 blockComment Nothing = mzero
-blockComment (Just (_, _, _)) = undefined
+-- TODO
+blockComment (Just (_, _, _)) = mzero
 
 escapeCodes :: [Parser Char]
 escapeCodes =

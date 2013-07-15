@@ -1,5 +1,4 @@
 
-{-# LANGUAGE UndecidableInstances #-}
 module H.Util where
 
 import H.Import
@@ -113,12 +112,4 @@ asProxied :: a -> Proxy a -> a
 asProxied = const
 
 infix 8 `asProxied`
-
-class (Functor m, Applicative m) => Applicative' m where
-
-class (Applicative' m, Monad m) => Monad' m where
-
-instance (Functor m, Applicative m) => Applicative' m where
-
-instance (Applicative' m, Monad m) => Monad' m where
 

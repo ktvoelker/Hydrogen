@@ -63,7 +63,7 @@ Library
     FlexibleContexts
     StandaloneDeriving
     RankNTypes
+    TypeFamilies
   other-extensions:
     TemplateHaskell
-    UndecidableInstances
 
