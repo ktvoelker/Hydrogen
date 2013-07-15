@@ -29,7 +29,7 @@ import System.IO
 import H.Import
 import H.Util
 
-class (Eq a, Ord a, Enum a, Bounded a, Read a, Show a) => StageNames a where
+class (Eq a, Ord a, Enum a, Bounded a, Show a) => StageNames a where
 
 data Options n =
   Options
