@@ -20,7 +20,7 @@ phases :: (StageNames n) => M.Map String n
 phases =
   M.fromList
   . map (\n -> (showStageName n, n))
-  $ [minBound, maxBound]
+  $ [minBound .. maxBound]
 
 newtype PhaseArg n = PhaseArg { getStageName :: n }
 
