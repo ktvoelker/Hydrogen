@@ -45,6 +45,12 @@ sepList = flip sepBy . tokEq . Separator
 kw :: (IdClass a) => String -> Parser a ()
 kw = tokEq . Keyword
 
+end :: (IdClass a) => String -> Parser a ()
+end = tokEq . Terminator
+
+sep :: (IdClass a) => String -> Parser a ()
+sep = tokEq . Separator
+
 litInt :: (IdClass a) => Parser a Integer
 litInt = tok "integer" $ \case
   Literal (LitInt n) -> Just n
