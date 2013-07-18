@@ -86,3 +86,8 @@ anyIdentifier = tok "identifier (any)" $ \case
   Identifier cls xs -> Just (cls, xs)
   _ -> Nothing
 
+oneIdentifier :: (IdClass a) => String -> Parser a ()
+oneIdentifier xs = tok ("`" ++ xs ++ "'") $ \case
+  Identifier _ xs' | xs == xs' -> Just ()
+  _ -> Nothing
+
