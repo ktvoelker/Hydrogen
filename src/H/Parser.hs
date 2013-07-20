@@ -33,23 +33,11 @@ tokWhen msg pred = tok msg $ \t -> if pred t then Just t else Nothing
 tokEq :: (IdClass a) => Token a -> Parser a ()
 tokEq t = tokWhen (show t) (== t) >> return ()
 
-delimit :: (IdClass a) => (String, String) -> Parser a b -> Parser a b
-delimit ds = between (tokEq $ Delimiter False ds) (tokEq $ Delimiter True ds)
-
-endList :: (IdClass a) => String -> Parser a b -> Parser a [b]
-endList = flip sepEndBy . tokEq . Terminator
-
-sepList :: (IdClass a) => String -> Parser a b -> Parser a [b]
-sepList = flip sepBy . tokEq . Separator
+delimit :: (IdClass a) => String -> String -> Parser a b -> Parser a b
+delimit ld rd = between (kw ld) (kw rd)
 
 kw :: (IdClass a) => String -> Parser a ()
 kw = tokEq . Keyword
-
-end :: (IdClass a) => String -> Parser a ()
-end = tokEq . Terminator
-
-sep :: (IdClass a) => String -> Parser a ()
-sep = tokEq . Separator
 
 litInt :: (IdClass a) => Parser a Integer
 litInt = tok "integer" $ \case

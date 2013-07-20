@@ -15,10 +15,7 @@ import Text.Parsec.String
 import H.Common
 
 data Token a =
-    Delimiter Bool (String, String)
-  | Separator String
-  | Terminator String
-  | Keyword String
+    Keyword String
   | Identifier a String
   | Literal Literal
   deriving (Eq, Ord, Show)
@@ -35,10 +32,7 @@ class (Eq a, Ord a, Enum a, Bounded a, Show a) => IdClass a where
 
 data LexerSpec a =
   LexerSpec
-  { sDelimiters  :: [(String, String)]
-  , sSeparators  :: [String]
-  , sTerminators :: [String]
-  , sKeywords    :: [String]
+  { sKeywords    :: [String]
   , sIdentifiers :: [(a, [Char], [Char])]
   , sStrings     :: StringSpec
   , sInts        :: Bool
@@ -87,10 +81,7 @@ skippable cs = void . optional . many1 $ comment cs <|> (space >> return ())
 
 tok spec =
   choice
-  [ delimiters (sDelimiters spec)
-  , separators (sSeparators spec)
-  , terminators (sTerminators spec)
-  , keywords (sKeywords spec)
+  [ keywords (sKeywords spec)
   , ident (sIdentifiers spec)
   , litInt (sInts spec) (sNegative spec)
   , litFloat (sFloats spec) (sNegative spec)
@@ -98,22 +89,6 @@ tok spec =
   , litChar (sStrings spec)
   , litBool (sBools spec)
   ]
-
-delimiters :: [(String, String)] -> Parser (Token a)
-delimiters = choice . map oneDelimPair
-
-oneDelimPair :: (String, String) -> Parser (Token a)
-oneDelimPair pair@(left, right) =
-  choice
-  [ string left  >> return (Delimiter False pair)
-  , string right >> return (Delimiter True pair)
-  ]
-
-separators :: [String] -> Parser (Token a)
-separators = choice . map (fmap Separator . string)
-
-terminators :: [String] -> Parser (Token a)
-terminators = choice . map (fmap Terminator . string)
 
 keywords :: [String] -> Parser (Token a)
 keywords = fmap Keyword . choice . map (try . string)

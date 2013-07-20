@@ -2,8 +2,6 @@
 TODO
 ====
 
-Finish porting FLang over to Hydrogen
-
 Switch to strict IO, somehow (perhaps conduit?)
 
 Switch from String to Text (and system-filepath)
