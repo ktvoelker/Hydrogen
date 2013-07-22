@@ -49,11 +49,6 @@ litFloat = tok "float" $ \case
   Literal (LitFloat f) -> Just f
   _ -> Nothing
 
-litString :: (IdClass a) => Parser a String
-litString = tok "string" $ \case
-  Literal (LitString xs) -> Just xs
-  _ -> Nothing
-
 litChar :: (IdClass a) => Parser a Char
 litChar = tok "character" $ \case
   Literal (LitChar c) -> Just c

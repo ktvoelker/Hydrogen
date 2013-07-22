@@ -43,6 +43,7 @@ Library
     H.Lexer
     H.Parser
     H.Phase
+    H.PrettyPrint
   other-modules:
     H.Annotation.Demo
     H.Annotation.Internal
@@ -64,6 +65,7 @@ Library
     StandaloneDeriving
     RankNTypes
     TypeFamilies
+    ScopedTypeVariables
   other-extensions:
     TemplateHaskell
 

@@ -113,3 +113,8 @@ asProxied = const
 
 infix 8 `asProxied`
 
+eitherAlt :: (Alternative f) => f a -> f b -> f (Either a b)
+eitherAlt la ra = (Left <$> la) <|> (Right <$> ra)
+
+infixl 3 `eitherAlt`
+

@@ -10,19 +10,22 @@ module H.Lexer
   ) where
 
 import Text.Parsec hiding ((<|>), many, optional)
+import Text.Parsec.Pos (initialPos)
 import Text.Parsec.String
 
 import H.Common
+import H.Phase
 
 data Token a =
     Keyword String
   | Identifier a String
   | Literal Literal
+  | InterpString [Either [(Token a, SourcePos)] String]
+  | StartFile String
   deriving (Eq, Ord, Show)
 
 data Literal =
-    LitString String
-  | LitChar Char
+    LitChar Char
   | LitInt Integer
   | LitFloat Rational
   | LitBool Bool
@@ -46,7 +49,7 @@ data StringSpec =
   StringSpec
   { sStringDelim :: Maybe Char
   , sCharDelim   :: Maybe Char
-  , sInterpolate :: Maybe (String, String)
+  , sInterpolate :: Maybe (Char, Char)
   } deriving (Eq, Ord, Show)
 
 data CommentSpec =
@@ -57,10 +60,17 @@ data CommentSpec =
 
 tokenize
   :: (Applicative m, Monad m, IdClass a)
-  => LexerSpec a -> String -> String -> MT n e m [(Token a, SourcePos)]
-tokenize spec name xs = case parse (file spec) name xs of
-  Left err -> fatal . Err ELexer Nothing Nothing . Just . show $ err
-  Right ts -> return ts
+  => LexerSpec a -> [InputFile] -> MT n e m [(Token a, SourcePos)]
+tokenize spec = liftM concat . mapM (tokenizeFile spec)
+
+tokenizeFile
+  :: (Applicative m, Monad m, IdClass a)
+   => LexerSpec a -> InputFile -> MT n e m [(Token a, SourcePos)]
+tokenizeFile spec (InputFile name xs) = case parse (file spec) name xs of
+  Left err -> do
+    report . Err ELexer Nothing Nothing . Just . show $ err
+    return []
+  Right ts -> return $ (StartFile name, initialPos name) : ts
 
 withPos parser = do
   pos <- getPosition
@@ -85,7 +95,7 @@ tok spec =
   , ident (sIdentifiers spec)
   , litInt (sInts spec) (sNegative spec)
   , litFloat (sFloats spec) (sNegative spec)
-  , litString (sStrings spec)
+  , litString spec
   , litChar (sStrings spec)
   , litBool (sBools spec)
   ]
@@ -152,18 +162,12 @@ blockComment (Just (_, _, _)) = mzero
 escapeCodes :: [Parser Char]
 escapeCodes =
   map (\(e, r) -> (char e :: Parser Char) >> return r)
-    [ ('b', '\b'), ('t', '\t'), ('n', '\n'), ('f', '\f'), ('r', '\r'), ('"', '"')
-    , ('\'', '\''), ('\\', '\\')
-    ]
+    [ ('b', '\b'), ('t', '\t'), ('n', '\n'), ('f', '\f'), ('r', '\r') ]
 
--- TODO support interpolation
--- 1. Allow escaping of the interpolation delimiters
--- 2. Result type of Parser (Either [(Token, SourcePos)] Char)
---    a. Inside interpolation, parse arbitrary tokens until the delimiter is reached
-charContent :: Maybe (String, String) -> Char -> Parser Char
-charContent _ quote = (char '\\' >> escape) <|> normal
+charContent :: Char -> Parser Char
+charContent quote = (char '\\' >> escape) <|> normal
   where
-    escape = foldr (<|>) (unicode <|> octal) escapeCodes
+    escape = foldr (<|>) (unicode <|> octal <|> anyChar) escapeCodes
     unicode = do
       _ <- char 'u' :: Parser Char
       count 4 hexDigit >>= return . chr . read . ("0x" ++)
@@ -176,21 +180,38 @@ charContent _ quote = (char '\\' >> escape) <|> normal
     normal = noneOf [quote, '\\']
     readDigit = read . (: [])
 
-litString :: StringSpec -> Parser (Token a)
-litString StringSpec{sStringDelim = Nothing} = mzero
-litString StringSpec{sStringDelim = Just quote, sInterpolate} =
-  fmap (Literal . LitString)
+litString :: (IdClass a) => LexerSpec a -> Parser (Token a)
+litString LexerSpec{sStrings = StringSpec{sStringDelim = Nothing}} = mzero
+litString spec@LexerSpec{sStrings = StringSpec{sStringDelim = Just quote}} =
+  fmap InterpString
   . between q q
   . many
-  . charContent sInterpolate
-  $ quote
+  $ oneInterp spec `eitherAlt` many (charContent quote)
   where
     q = char quote
+
+oneInterp :: forall a. (IdClass a) => LexerSpec a -> Parser [(Token a, SourcePos)]
+oneInterp LexerSpec{sStrings = StringSpec{sInterpolate = Nothing}} = mzero
+oneInterp spec@LexerSpec{sStrings = StringSpec{sInterpolate = Just (li, ri)}} =
+  char li *> f 1
+  where
+    f :: Integer -> Parser [(Token a, SourcePos)]
+    f 1 = char ri *> pure [] <|> g 1
+    f n = g n
+    g :: Integer -> Parser [(Token a, SourcePos)]
+    g n = do
+      posTok@(tok, _) <- withPos $ tok spec
+      (posTok :) <$> f (c n tok)
+    c :: Integer -> Token a -> Integer
+    c n (Keyword (kw : []))
+      | kw == li = n + 1
+      | kw == ri = n - 1
+    c n _ = n
 
 litChar :: StringSpec -> Parser (Token a)
 litChar StringSpec{sCharDelim = Nothing} = mzero
 litChar StringSpec{sCharDelim = Just quote} =
-  fmap (Literal . LitChar) . between q q . charContent Nothing $ quote
+  fmap (Literal . LitChar) . between q q . charContent $ quote
   where
     q = char quote
 
