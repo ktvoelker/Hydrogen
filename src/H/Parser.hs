@@ -1,10 +1,12 @@
 
 module H.Parser where
 
+import qualified Data.Text as T
 import Text.Parsec hiding (parse, (<|>), many, optional)
 import qualified Text.Parsec as P
 
 import H.Common
+import H.Common.IO
 import H.Lexer (Token(..), Literal(..), IdClass())
 
 type ParserInput a = [(Token a, SourcePos)]
@@ -17,10 +19,10 @@ instance MonadSourcePos (Parser a) where
 parse
   :: (Applicative m, Monad m)
   => Parser a b
-  -> String
+  -> FilePath
   -> ParserInput a
   -> MT n e m b
-parse file name xs = case P.parse file name xs of
+parse file name xs = case P.parse file (encodeString name) xs of
   Left err -> fatal . Err EParser Nothing Nothing . Just . show $ err
   Right decl -> return decl
 
@@ -33,10 +35,10 @@ tokWhen msg pred = tok msg $ \t -> if pred t then Just t else Nothing
 tokEq :: (IdClass a) => Token a -> Parser a ()
 tokEq t = tokWhen (show t) (== t) >> return ()
 
-delimit :: (IdClass a) => String -> String -> Parser a b -> Parser a b
+delimit :: (IdClass a) => T.Text -> T.Text -> Parser a b -> Parser a b
 delimit ld rd = between (kw ld) (kw rd)
 
-kw :: (IdClass a) => String -> Parser a ()
+kw :: (IdClass a) => T.Text -> Parser a ()
 kw = tokEq . Keyword
 
 litInt :: (IdClass a) => Parser a Integer
@@ -59,18 +61,18 @@ litBool = tok "Boolean" $ \case
   Literal (LitBool b) -> Just b
   _ -> Nothing
 
-identifier :: (IdClass a) => a -> Parser a String
+identifier :: (IdClass a) => a -> Parser a T.Text
 identifier cls = tok ("identifier (" ++ show cls ++ ")") $ \case
   Identifier cls' xs | cls == cls' -> Just xs
   _ -> Nothing
 
-anyIdentifier :: (IdClass a) => Parser a (a, String)
+anyIdentifier :: (IdClass a) => Parser a (a, T.Text)
 anyIdentifier = tok "identifier (any)" $ \case
   Identifier cls xs -> Just (cls, xs)
   _ -> Nothing
 
-oneIdentifier :: (IdClass a) => String -> Parser a ()
-oneIdentifier xs = tok ("`" ++ xs ++ "'") $ \case
+oneIdentifier :: (IdClass a) => T.Text -> Parser a ()
+oneIdentifier xs = tok ("`" ++ T.unpack xs ++ "'") $ \case
   Identifier _ xs' | xs == xs' -> Just ()
   _ -> Nothing
 

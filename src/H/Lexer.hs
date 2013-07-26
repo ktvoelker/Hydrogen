@@ -9,19 +9,22 @@ module H.Lexer
   , tokenize
   ) where
 
+import qualified Data.Conduit.List as CL
+import qualified Data.Set as S
+import qualified Data.Text as T
 import Text.Parsec hiding ((<|>), many, optional)
 import Text.Parsec.Pos (initialPos)
-import Text.Parsec.String
+import Text.Parsec.Text
 
 import H.Common
-import H.Phase
+import H.Common.IO
 
 data Token a =
-    Keyword String
-  | Identifier a String
+    Keyword T.Text
+  | Identifier a T.Text
   | Literal Literal
-  | InterpString [Either [(Token a, SourcePos)] String]
-  | StartFile String
+  | InterpString [Either [(Token a, SourcePos)] T.Text]
+  | StartFile FilePath
   deriving (Eq, Ord, Show)
 
 data Literal =
@@ -35,13 +38,13 @@ class (Eq a, Ord a, Enum a, Bounded a, Show a) => IdClass a where
 
 data LexerSpec a =
   LexerSpec
-  { sKeywords    :: [String]
-  , sIdentifiers :: [(a, [Char], [Char])]
+  { sKeywords    :: [T.Text]
+  , sIdentifiers :: [(a, S.Set Char, S.Set Char)]
   , sStrings     :: StringSpec
   , sInts        :: Bool
-  , sNegative    :: Maybe String
+  , sNegative    :: Maybe T.Text
   , sFloats      :: Bool
-  , sBools       :: Maybe (String, String)
+  , sBools       :: Maybe (T.Text, T.Text)
   , sComments    :: CommentSpec
   } deriving (Eq, Ord, Show)
 
@@ -54,23 +57,27 @@ data StringSpec =
 
 data CommentSpec =
   CommentSpec
-  { sLineComment  :: Maybe String
-  , sBlockComment :: Maybe (String, String, Bool)
+  { sLineComment  :: Maybe T.Text
+  , sBlockComment :: Maybe (T.Text, T.Text, Bool)
   } deriving (Eq, Ord, Show)
 
+-- Turn each file into a Producer of tokens, and then join them all together into
+-- a single Producer of tokens, and then sink that into a list
 tokenize
-  :: (Applicative m, Monad m, IdClass a)
-  => LexerSpec a -> [InputFile] -> MT n e m [(Token a, SourcePos)]
+  :: (Applicative m, Monad m, MonadIO m, IdClass a)
+  => LexerSpec a -> [FilePath] -> MT n e m [(Token a, SourcePos)]
 tokenize spec = liftM concat . mapM (tokenizeFile spec)
 
 tokenizeFile
-  :: (Applicative m, Monad m, IdClass a)
-   => LexerSpec a -> InputFile -> MT n e m [(Token a, SourcePos)]
-tokenizeFile spec (InputFile name xs) = case parse (file spec) name xs of
-  Left err -> do
-    report . Err ELexer Nothing Nothing . Just . show $ err
-    return []
-  Right ts -> return $ (StartFile name, initialPos name) : ts
+  :: (Applicative m, Monad m, MonadIO m, IdClass a)
+   => LexerSpec a -> FilePath -> MT n e m [(Token a, SourcePos)]
+tokenizeFile spec name = do
+  xs <- liftIO . runResourceT $ sourceFile name $= decode utf8 $$ CL.consume
+  case parse (file spec) (encodeString name) . T.concat $ xs of
+    Left err -> do
+      report . Err ELexer Nothing Nothing . Just . show $ err
+      return []
+    Right ts -> return $ (StartFile name, initialPos (encodeString name)) : ts
 
 withPos parser = do
   pos <- getPosition
@@ -100,26 +107,31 @@ tok spec =
   , litBool (sBools spec)
   ]
 
-keywords :: [String] -> Parser (Token a)
-keywords = fmap Keyword . choice . map (try . string)
+text :: T.Text -> Parser T.Text
+text xs = string (T.unpack xs) >> return xs
 
-ident :: (IdClass a) => [(a, String, String)] -> Parser (Token a)
+keywords :: [T.Text] -> Parser (Token a)
+keywords = fmap Keyword . choice . map (try . text)
+
+ident :: (IdClass a) => [(a, S.Set Char, S.Set Char)] -> Parser (Token a)
 ident = choice . map oneIdent
 
-oneIdent :: (IdClass a) => (a, String, String) -> Parser (Token a)
+oneIdent :: (IdClass a) => (a, S.Set Char, S.Set Char) -> Parser (Token a)
 oneIdent (cls, head, tail) =
-  (Identifier cls .) . (:) <$> oneOf head <*> many (oneOf tail)
+  (Identifier cls .) . (T.pack .) . (:) <$> ool head <*> many (ool tail)
+  where
+    ool = oneOf . S.toList
 
-sign :: (Num a) => Maybe String -> Parser (a -> a)
-sign = maybe (return id) $ option id . (>> return negate) . string
+sign :: (Num a) => Maybe T.Text -> Parser (a -> a)
+sign = maybe (return id) $ option id . (>> return negate) . text
 
-litInt :: Bool -> Maybe String -> Parser (Token a)
+litInt :: Bool -> Maybe T.Text -> Parser (Token a)
 litInt False _ = mzero
 litInt True xs = do
   signFunc <- sign xs
   fmap (Literal . LitInt . signFunc . read) $ many1 digit
 
-litFloat :: Bool -> Maybe String -> Parser (Token a)
+litFloat :: Bool -> Maybe T.Text -> Parser (Token a)
 litFloat False _ = mzero
 litFloat True xs = do
   mainSignFunc <- sign xs
@@ -146,15 +158,15 @@ litFloat True xs = do
 comment :: CommentSpec -> Parser ()
 comment CommentSpec{..} = lineComment sLineComment <|> blockComment sBlockComment
 
-lineComment :: Maybe String -> Parser ()
+lineComment :: Maybe T.Text -> Parser ()
 lineComment Nothing = mzero
 lineComment (Just begin) = do
-  _ <- string begin
+  _ <- text begin
   _ <- many . noneOf $ "\n\r"
   void . optional . char $ '\r'
   (char '\n' >> return ()) <|> eof
 
-blockComment :: Maybe (String, String, Bool) -> Parser ()
+blockComment :: Maybe (T.Text, T.Text, Bool) -> Parser ()
 blockComment Nothing = mzero
 -- TODO
 blockComment (Just (_, _, _)) = mzero
@@ -186,7 +198,7 @@ litString spec@LexerSpec{sStrings = StringSpec{sStringDelim = Just quote}} =
   fmap InterpString
   . between q q
   . many
-  $ oneInterp spec `eitherAlt` many (charContent quote)
+  $ oneInterp spec `eitherAlt` (T.pack <$> many (charContent quote))
   where
     q = char quote
 
@@ -203,9 +215,9 @@ oneInterp spec@LexerSpec{sStrings = StringSpec{sInterpolate = Just (li, ri)}} =
       posTok@(tok, _) <- withPos $ tok spec
       (posTok :) <$> f (c n tok)
     c :: Integer -> Token a -> Integer
-    c n (Keyword (kw : []))
-      | kw == li = n + 1
-      | kw == ri = n - 1
+    c n (Keyword kw)
+      | kw == T.singleton li = n + 1
+      | kw == T.singleton ri = n - 1
     c n _ = n
 
 litChar :: StringSpec -> Parser (Token a)
@@ -215,12 +227,12 @@ litChar StringSpec{sCharDelim = Just quote} =
   where
     q = char quote
 
-litBool :: Maybe (String, String) -> Parser (Token a)
+litBool :: Maybe (T.Text, T.Text) -> Parser (Token a)
 litBool Nothing = mzero
 litBool (Just (false, true)) =
   fmap (Literal . LitBool)
   $ choice
-    [ string false >> return False
-    , string true  >> return True
+    [ text false >> return False
+    , text true  >> return True
     ]
 

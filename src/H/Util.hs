@@ -101,11 +101,6 @@ minimumByM c (x : xs) = f x c xs
         LT -> f x c xs
         _ -> f acc c xs
 
-getInput :: String -> IO String
-getInput xs = case xs of
-  "-" -> getContents
-  _   -> readFile xs
- 
 data Proxy a = Proxy
 
 asProxied :: a -> Proxy a -> a

@@ -22,6 +22,8 @@ module H.Monad
   , stage
   ) where
 
+-- import Control.Monad.Base
+-- import Control.Monad.Trans.Control
 import qualified Data.Set as S
 import Text.Parsec.Pos (SourcePos())
 import System.IO
@@ -125,6 +127,30 @@ instance (Functor m, Applicative m, Monad m) => Monad (MT n e m) where
 
 instance MonadTrans (MT n e) where
   lift = MT . lift4
+
+instance (Applicative m, MonadIO m) => MonadIO (MT n e m) where
+  liftIO = MT . liftIO
+
+{-
+instance (MonadBase b m) => MonadBase b (MT n e m) where
+  liftBase = liftBaseDefault
+
+-- Copied from the documentation for Control.Monad.Trans.Control
+instance MonadTransControl (MT n e) where
+  newtype StT (MT n e) a = StMT { unStMT :: StT (
+    ReaderT (Options n)
+    (ErrorT (Either (Err e) (Finished n))
+    (StateT MTState
+    (WriterT [Result e] m)))) a }
+  liftWith = defaultLiftWith MT getMT StMT
+  restoreT = defaultRestoreT MT unStMT
+
+-- Copied from the documentation for Control.Monad.Trans.Control
+instance (MonadBaseControl b m) => MonadBaseControl b (MT n e m) where
+  newtype StM (MT n e m) a = StMT' { unStMT' :: ComposeSt (MT n e) m a }
+  liftBaseWith = defaultLiftBaseWith StMT'
+  restoreM = defaultRestoreM unStMT'
+-}
 
 instance (Functor m) => Functor (MT n e m) where
   fmap f (MT m) = MT . fmap f $ m

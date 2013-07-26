@@ -41,5 +41,9 @@ import Data.Ratio
 import Data.Set (Set())
 import Data.Traversable
 import GHC.Real
-import Prelude hiding ((.), id, log, mapM, sequence)
+import Prelude hiding
+  ( (.), id, log, mapM, sequence
+  , FilePath, readFile, writeFile, putStr, putStrLn, readLn, getContents, getChar
+  , userError
+  )
 
