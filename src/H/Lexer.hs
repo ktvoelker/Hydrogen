@@ -1,6 +1,11 @@
 
 module H.Lexer
-  ( Token(..)
+  ( lowerAlphas
+  , upperAlphas
+  , alphas
+  , digits
+  , underscore
+  , Token(..)
   , Literal(..)
   , IdClass
   , LexerSpec(..)
@@ -18,6 +23,18 @@ import Text.Parsec.Text
 
 import H.Common
 import H.Common.IO
+
+lowerAlphas, upperAlphas, alphas, digits, underscore :: S.Set Char
+
+lowerAlphas = S.fromList ['a' .. 'z']
+
+upperAlphas = S.fromList ['A' .. 'Z']
+
+alphas = lowerAlphas <> upperAlphas
+
+digits = S.fromList ['0' .. '9']
+
+underscore = S.singleton '_'
 
 data Token a =
     Keyword T.Text

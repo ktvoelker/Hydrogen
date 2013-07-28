@@ -14,6 +14,7 @@ module H.Import
   , module Data.List
   , module Data.Map
   , module Data.Maybe
+  , module Data.Monoid
   , module Data.Ord
   , module Data.Ratio
   , module Data.Set
@@ -33,9 +34,10 @@ import Control.Monad.Writer hiding (forM, mapM, sequence)
 import Data.Char
 import Data.Either
 import Data.Lens
-import Data.List hiding (mapAccumL, mapAccumR)
+import Data.List hiding (mapAccumL, mapAccumR, find, insert, union)
 import Data.Map (Map())
 import Data.Maybe
+import Data.Monoid
 import Data.Ord
 import Data.Ratio
 import Data.Set (Set())

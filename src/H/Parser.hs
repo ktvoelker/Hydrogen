@@ -6,7 +6,6 @@ import Text.Parsec hiding (parse, (<|>), many, optional)
 import qualified Text.Parsec as P
 
 import H.Common
-import H.Common.IO
 import H.Lexer (Token(..), Literal(..), IdClass())
 
 type ParserInput a = [(Token a, SourcePos)]
@@ -19,10 +18,9 @@ instance MonadSourcePos (Parser a) where
 parse
   :: (Applicative m, Monad m)
   => Parser a b
-  -> FilePath
   -> ParserInput a
   -> MT n e m b
-parse file name xs = case P.parse file (encodeString name) xs of
+parse file xs = case P.parse file "unknown" xs of
   Left err -> fatal . Err EParser Nothing Nothing . Just . show $ err
   Right decl -> return decl
 

@@ -52,7 +52,9 @@ Library
   other-modules:
     H.Annotation.Demo
     H.Annotation.Internal
+    H.Collection
     H.Import
+    H.Import.IO
     H.Monad
     H.Phase.CmdLine
     H.Util
@@ -71,6 +73,7 @@ Library
     RankNTypes
     TypeFamilies
     ScopedTypeVariables
+    ExplicitForAll
   other-extensions:
     TemplateHaskell
 

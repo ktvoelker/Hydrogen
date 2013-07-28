@@ -2,3 +2,15 @@
 TODO
 ====
 
+Eliminate String more completely
+
+  Hide Prelude and Data.List functions dealing only with String
+
+    Provide replacements as needed
+
+  Hide the old Show and Read classes in place of Text-based ones
+
+    Use Builder in Show
+
+    Provide a less crazy type in Read
+

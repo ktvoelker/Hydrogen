@@ -1,6 +1,8 @@
 
 module H.Util where
 
+import qualified Data.Text as T
+
 import H.Import
 
 data ExitCode = ExitSuccess | ExitFailure deriving (Eq, Ord, Enum, Bounded, Read, Show)
@@ -112,4 +114,7 @@ eitherAlt :: (Alternative f) => f a -> f b -> f (Either a b)
 eitherAlt la ra = (Left <$> la) <|> (Right <$> ra)
 
 infixl 3 `eitherAlt`
+
+showText :: (Show a) => a -> T.Text
+showText = T.pack . show
 
