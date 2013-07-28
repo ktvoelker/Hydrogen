@@ -55,13 +55,22 @@ import H.Import
  -
  - fromList [] == empty
  -
+ - fromList (toList c) == c
+ -
  - singleton x = insert x empty
  -
- - TODO
+ - (not (x `member` c)) === (findKey x c == Nothing)
  -
- - member
+ - append c empty == c
  -
- - append
+ - append empty c == c
+ -
+ - x `elem` xs
+ -   when
+ -     x `elem` findKey k c
+ -     findKey k (append c d) == xs OR findKey k (append d c) == xs
+ -
+ - MORE LAWS FOR EVERYTHING using entKey and entVal
  -}
 
 class (Ord (Key a)) => Collection a where
