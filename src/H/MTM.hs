@@ -27,10 +27,19 @@ class (MonotonicMonoid a) => ElementalMonoid a where
   type Unit a :: *
   msingleton :: Unit a -> a
   mextract :: a -> Maybe (Unit a, a)
-  mconvert :: (ElementalMonoid b, Unit a ~ Unit b) => a -> b
-  mconvert xs = case mextract xs of
-    Nothing -> mempty
-    Just (x, xs') -> msingleton x <> mconvert xs'
+
+mconvert :: (ElementalMonoid a, ElementalMonoid b, Unit a ~ Unit b) => a -> b
+mconvert = mmap id
+
+mmap :: (ElementalMonoid a, ElementalMonoid b) => (Unit a -> Unit b) -> a -> b
+mmap f xs = case mextract xs of
+  Nothing -> mempty
+  Just (x, xs') -> msingleton (f x) <> mmap f xs'
+
+mmconcat :: (ElementalMonoid a, ElementalMonoid b, Unit a ~ b) => a -> b
+mmconcat xs = case mextract xs of
+  Nothing -> mempty
+  Just (x, xs') -> x <> mmconcat xs'
 
 -- | Law: msize a + msize b == msize (a <> b)
 class (ElementalMonoid a) => PreservingMonoid a where
@@ -45,5 +54,8 @@ class IdempotentMonoid a where
 class (ElementalMonoid a, Unit a ~ (Index a, Value a)) => IndexedMonoid a where
   type Index a :: *
   type Value a :: *
+  mindices :: (ElementalMonoid b, Index a ~ Unit b) => a -> b
   mlookup :: (ElementalMonoid b, Value a ~ Unit b) => Index a -> a -> b
+  mvalues :: (ElementalMonoid b, Value a ~ Unit b) => a -> b
+  mvalues a = mmconcat . mmap (`mlookup` a) $ mindices a `asTypeOf` []
 
