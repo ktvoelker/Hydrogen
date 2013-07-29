@@ -2,6 +2,11 @@
 TODO
 ====
 
+Bring back InputFile in some form
+
+  It's annoying to have the first phase force IO on the whole pipeline
+  when the output is IO-free
+
 Eliminate String more completely
 
   Hide Prelude and Data.List functions dealing only with String
