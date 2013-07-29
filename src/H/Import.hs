@@ -18,7 +18,9 @@ module H.Import
   , module Data.Ord
   , module Data.Ratio
   , module Data.Set
+  , module Data.Text
   , module Data.Traversable
+  , module Filesystem.Path.CurrentOS
   , module GHC.Real
   , module Prelude
   ) where
@@ -34,14 +36,16 @@ import Control.Monad.Writer hiding (forM, mapM, sequence)
 import Data.Char
 import Data.Either
 import Data.Lens
-import Data.List hiding (mapAccumL, mapAccumR, find, insert, union)
+import Data.List hiding (mapAccumL, mapAccumR, find, insert, union, stripPrefix)
 import Data.Map (Map())
 import Data.Maybe
 import Data.Monoid
 import Data.Ord
 import Data.Ratio
 import Data.Set (Set())
+import Data.Text (Text())
 import Data.Traversable
+import Filesystem.Path.CurrentOS hiding (append, concat, encode, decode, null, empty)
 import GHC.Real
 import Prelude hiding
   ( (.), id, log, mapM, sequence

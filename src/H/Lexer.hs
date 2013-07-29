@@ -23,9 +23,8 @@ import Text.Parsec.Pos (initialPos)
 import Text.Parsec.Text
 
 import H.Common
-import H.Common.IO
 
-lowerAlphas, upperAlphas, alphas, digits, underscore :: S.Set Char
+lowerAlphas, upperAlphas, alphas, digits, underscore :: Set Char
 
 lowerAlphas = S.fromList ['a' .. 'z']
 
@@ -38,10 +37,10 @@ digits = S.fromList ['0' .. '9']
 underscore = S.singleton '_'
 
 data Token a =
-    Keyword T.Text
-  | Identifier a T.Text
+    Keyword Text
+  | Identifier a Text
   | Literal Literal
-  | InterpString [Either [(Token a, SourcePos)] T.Text]
+  | InterpString [Either [(Token a, SourcePos)] Text]
   | StartFile FilePath
   deriving (Eq, Ord, Show)
 
@@ -56,13 +55,13 @@ class (Eq a, Ord a, Enum a, Bounded a, Show a) => IdClass a where
 
 data LexerSpec a =
   LexerSpec
-  { sKeywords    :: [T.Text]
-  , sIdentifiers :: [(a, S.Set Char, S.Set Char)]
+  { sKeywords    :: [Text]
+  , sIdentifiers :: [(a, Set Char, Set Char)]
   , sStrings     :: StringSpec
   , sInts        :: Bool
-  , sNegative    :: Maybe T.Text
+  , sNegative    :: Maybe Text
   , sFloats      :: Bool
-  , sBools       :: Maybe (T.Text, T.Text)
+  , sBools       :: Maybe (Text, Text)
   , sComments    :: CommentSpec
   } deriving (Eq, Ord, Show)
 
@@ -75,8 +74,8 @@ data StringSpec =
 
 data CommentSpec =
   CommentSpec
-  { sLineComment  :: Maybe T.Text
-  , sBlockComment :: Maybe (T.Text, T.Text, Bool)
+  { sLineComment  :: Maybe Text
+  , sBlockComment :: Maybe (Text, Text, Bool)
   } deriving (Eq, Ord, Show)
 
 type Tokens a = [(Token a, SourcePos)]
@@ -84,13 +83,13 @@ type Tokens a = [(Token a, SourcePos)]
 -- Turn each file into a Producer of tokens, and then join them all together into
 -- a single Producer of tokens, and then sink that into a list
 tokenize
-  :: (Applicative m, Monad m, MonadIO m, IdClass a)
-  => LexerSpec a -> FileMap T.Text -> MT n e m (FileMap (Tokens a))
+  :: (Applicative m, Monad m, IdClass a)
+  => LexerSpec a -> FileMap Text -> MT n e m (FileMap (Tokens a))
 tokenize = (sequence .) . (M.mapWithKey . tokenizeFile)
 
 tokenizeFile
-  :: (Applicative m, Monad m, MonadIO m, IdClass a)
-   => LexerSpec a -> FilePath -> T.Text -> MT n e m (Tokens a)
+  :: (Applicative m, Monad m, IdClass a)
+   => LexerSpec a -> FilePath -> Text -> MT n e m (Tokens a)
 tokenizeFile spec name xs =
   case parse (file spec) (encodeString name) xs of
     Left err -> do
@@ -126,31 +125,31 @@ tok spec =
   , litBool (sBools spec)
   ]
 
-text :: T.Text -> Parser T.Text
+text :: Text -> Parser Text
 text xs = string (T.unpack xs) >> return xs
 
-keywords :: [T.Text] -> Parser (Token a)
+keywords :: [Text] -> Parser (Token a)
 keywords = fmap Keyword . choice . map (try . text)
 
-ident :: (IdClass a) => [(a, S.Set Char, S.Set Char)] -> Parser (Token a)
+ident :: (IdClass a) => [(a, Set Char, Set Char)] -> Parser (Token a)
 ident = choice . map oneIdent
 
-oneIdent :: (IdClass a) => (a, S.Set Char, S.Set Char) -> Parser (Token a)
+oneIdent :: (IdClass a) => (a, Set Char, Set Char) -> Parser (Token a)
 oneIdent (cls, head, tail) =
   (Identifier cls .) . (T.pack .) . (:) <$> ool head <*> many (ool tail)
   where
     ool = oneOf . S.toList
 
-sign :: (Num a) => Maybe T.Text -> Parser (a -> a)
+sign :: (Num a) => Maybe Text -> Parser (a -> a)
 sign = maybe (return id) $ option id . (>> return negate) . text
 
-litInt :: Bool -> Maybe T.Text -> Parser (Token a)
+litInt :: Bool -> Maybe Text -> Parser (Token a)
 litInt False _ = mzero
 litInt True xs = do
   signFunc <- sign xs
   fmap (Literal . LitInt . signFunc . read) $ many1 digit
 
-litFloat :: Bool -> Maybe T.Text -> Parser (Token a)
+litFloat :: Bool -> Maybe Text -> Parser (Token a)
 litFloat False _ = mzero
 litFloat True xs = do
   mainSignFunc <- sign xs
@@ -177,7 +176,7 @@ litFloat True xs = do
 comment :: CommentSpec -> Parser ()
 comment CommentSpec{..} = lineComment sLineComment <|> blockComment sBlockComment
 
-lineComment :: Maybe T.Text -> Parser ()
+lineComment :: Maybe Text -> Parser ()
 lineComment Nothing = mzero
 lineComment (Just begin) = do
   _ <- text begin
@@ -185,7 +184,7 @@ lineComment (Just begin) = do
   void . optional . char $ '\r'
   (char '\n' >> return ()) <|> eof
 
-blockComment :: Maybe (T.Text, T.Text, Bool) -> Parser ()
+blockComment :: Maybe (Text, Text, Bool) -> Parser ()
 blockComment Nothing = mzero
 -- TODO
 blockComment (Just (_, _, _)) = mzero
@@ -246,7 +245,7 @@ litChar StringSpec{sCharDelim = Just quote} =
   where
     q = char quote
 
-litBool :: Maybe (T.Text, T.Text) -> Parser (Token a)
+litBool :: Maybe (Text, Text) -> Parser (Token a)
 litBool Nothing = mzero
 litBool (Just (false, true)) =
   fmap (Literal . LitBool)

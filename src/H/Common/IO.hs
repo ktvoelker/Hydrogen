@@ -24,8 +24,6 @@ sourceFile = CB.sourceFile . encodeString
 getInput :: (MonadResource m) => String -> Producer m BS.ByteString
 getInput "-" = CB.sourceHandle stdin
 getInput xs  = CB.sourceFile xs
- 
-type FileMap a = M.Map FilePath a
 
 readFile :: (MonadIO m) => FilePath -> m T.Text
 readFile fp =

@@ -117,4 +117,6 @@ infixl 3 `eitherAlt`
 
 showText :: (Show a) => a -> T.Text
 showText = T.pack . show
+ 
+type FileMap a = Map FilePath a
 
