@@ -1,16 +1,16 @@
 
 module H.Parser where
 
+import qualified Data.Map as M
 import qualified Data.Text as T
 import Text.Parsec hiding (parse, (<|>), many, optional)
 import qualified Text.Parsec as P
 
 import H.Common
-import H.Lexer (Token(..), Literal(..), IdClass())
+import H.Common.IO
+import H.Lexer (Token(..), Literal(..), IdClass(), Tokens)
 
-type ParserInput a = [(Token a, SourcePos)]
-
-type Parser a = Parsec (ParserInput a) ()
+type Parser a = Parsec (Tokens a) ()
 
 instance MonadSourcePos (Parser a) where
   getSourcePos = getPosition
@@ -18,9 +18,17 @@ instance MonadSourcePos (Parser a) where
 parse
   :: (Applicative m, Monad m)
   => Parser a b
-  -> ParserInput a
+  -> FileMap (Tokens a)
+  -> MT n e m (FileMap b)
+parse = (sequence .) . (M.mapWithKey . parseFile)
+
+parseFile
+  :: (Applicative m, Monad m)
+  => Parser a b
+  -> FilePath
+  -> Tokens a
   -> MT n e m b
-parse file xs = case P.parse file "unknown" xs of
+parseFile file fp xs = case P.parse file (encodeString fp) xs of
   Left err -> fatal . Err EParser Nothing Nothing . Just . show $ err
   Right decl -> return decl
 

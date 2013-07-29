@@ -11,10 +11,11 @@ module H.Lexer
   , LexerSpec(..)
   , StringSpec(..)
   , CommentSpec(..)
+  , Tokens
   , tokenize
   ) where
 
-import qualified Data.Conduit.List as CL
+import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Text as T
 import Text.Parsec hiding ((<|>), many, optional)
@@ -78,19 +79,20 @@ data CommentSpec =
   , sBlockComment :: Maybe (T.Text, T.Text, Bool)
   } deriving (Eq, Ord, Show)
 
+type Tokens a = [(Token a, SourcePos)]
+
 -- Turn each file into a Producer of tokens, and then join them all together into
 -- a single Producer of tokens, and then sink that into a list
 tokenize
   :: (Applicative m, Monad m, MonadIO m, IdClass a)
-  => LexerSpec a -> [FilePath] -> MT n e m [(Token a, SourcePos)]
-tokenize spec = liftM concat . mapM (tokenizeFile spec)
+  => LexerSpec a -> FileMap T.Text -> MT n e m (FileMap (Tokens a))
+tokenize = (sequence .) . (M.mapWithKey . tokenizeFile)
 
 tokenizeFile
   :: (Applicative m, Monad m, MonadIO m, IdClass a)
-   => LexerSpec a -> FilePath -> MT n e m [(Token a, SourcePos)]
-tokenizeFile spec name = do
-  xs <- liftIO . runResourceT $ sourceFile name $= decode utf8 $$ CL.consume
-  case parse (file spec) (encodeString name) . T.concat $ xs of
+   => LexerSpec a -> FilePath -> T.Text -> MT n e m (Tokens a)
+tokenizeFile spec name xs =
+  case parse (file spec) (encodeString name) xs of
     Left err -> do
       report . Err ELexer Nothing Nothing . Just . show $ err
       return []
@@ -101,7 +103,7 @@ withPos parser = do
   ret <- parser
   return (ret, pos)
 
-file :: (IdClass a) => LexerSpec a -> Parser [(Token a, SourcePos)]
+file :: (IdClass a) => LexerSpec a -> Parser (Tokens a)
 file spec = do
   sk
   xs <- many1 (withPos $ tok spec) `sepEndBy` sk
