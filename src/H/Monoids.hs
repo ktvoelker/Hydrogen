@@ -1,5 +1,5 @@
 
-module H.MTM where
+module H.Monoids where
 
 import Data.Monoid
 import qualified Data.Map as M

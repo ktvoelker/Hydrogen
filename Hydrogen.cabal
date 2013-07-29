@@ -52,10 +52,10 @@ Library
   other-modules:
     H.Annotation.Demo
     H.Annotation.Internal
-    H.Collection
     H.Import
     H.Import.IO
     H.Monad
+    H.Monoids
     H.Phase.CmdLine
     H.Util
   default-extensions:
