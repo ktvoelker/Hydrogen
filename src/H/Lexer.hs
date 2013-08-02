@@ -19,7 +19,6 @@ import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Text as T
 import Text.Parsec hiding ((<|>), many, optional)
-import Text.Parsec.Pos (initialPos)
 import Text.Parsec.Text
 
 import H.Common
@@ -40,8 +39,10 @@ data Token a =
     Keyword Text
   | Identifier a Text
   | Literal Literal
-  | InterpString [Either [(Token a, SourcePos)] Text]
-  | StartFile FilePath
+  | BeginString 
+  | EndString
+  | BeginInterp
+  | EndInterp
   deriving (Eq, Ord, Show)
 
 data Literal =
@@ -49,6 +50,7 @@ data Literal =
   | LitInt Integer
   | LitFloat Rational
   | LitBool Bool
+  | LitString Text
   deriving (Eq, Ord, Show)
 
 class (Eq a, Ord a, Enum a, Bounded a, Show a) => IdClass a where
@@ -95,7 +97,7 @@ tokenizeFile spec name xs =
     Left err -> do
       report . Err ELexer Nothing Nothing . Just . show $ err
       return []
-    Right ts -> return $ (StartFile name, initialPos (encodeString name)) : ts
+    Right ts -> return ts
 
 withPos parser = do
   pos <- getPosition
@@ -105,7 +107,7 @@ withPos parser = do
 file :: (IdClass a) => LexerSpec a -> Parser (Tokens a)
 file spec = do
   sk
-  xs <- many1 (withPos $ tok spec) `sepEndBy` sk
+  xs <- toks spec `sepEndBy` sk
   eof
   return . concat $ xs
   where
@@ -114,13 +116,16 @@ file spec = do
 skippable :: CommentSpec -> Parser ()
 skippable cs = void . optional . many1 $ comment cs <|> (space >> return ())
 
+toks :: (IdClass a) => LexerSpec a -> Parser (Tokens a)
+toks spec = fmap concat . many $ ((: []) <$> withPos (tok spec)) <|> litString spec
+
+tok :: (IdClass a) => LexerSpec a -> Parser (Token a)
 tok spec =
   choice
   [ keywords (sKeywords spec)
   , ident (sIdentifiers spec)
   , litInt (sInts spec) (sNegative spec)
   , litFloat (sFloats spec) (sNegative spec)
-  , litString spec
   , litChar (sStrings spec)
   , litBool (sBools spec)
   ]
@@ -210,20 +215,32 @@ charContent quote = (char '\\' >> escape) <|> normal
     normal = noneOf [quote, '\\']
     readDigit = read . (: [])
 
-litString :: (IdClass a) => LexerSpec a -> Parser (Token a)
+litString :: (IdClass a) => LexerSpec a -> Parser [(Token a, SourcePos)]
 litString LexerSpec{sStrings = StringSpec{sStringDelim = Nothing}} = mzero
-litString spec@LexerSpec{sStrings = StringSpec{sStringDelim = Just quote}} =
-  fmap InterpString
-  . between q q
-  . many
-  $ oneInterp spec `eitherAlt` (T.pack <$> many (charContent quote))
+litString LexerSpec
+  { sStrings = StringSpec{ sStringDelim = Just quote, sInterpolate = Nothing }
+  } = fmap (: []) $ withPos $ between q q $ charContentChunk quote
+  where
+    q = char quote
+litString spec@LexerSpec{sStrings = StringSpec{sStringDelim = Just quote}} = do
+  b  <- withPos $ return BeginString
+  ts <- fmap concat . between q q . many
+    $ oneInterp spec <|> ((: []) <$> withPos (charContentChunk quote))
+  e  <- withPos $ return EndString
+  return $ b : ts ++ [e]
   where
     q = char quote
 
+charContentChunk :: (IdClass a) => Char -> Parser (Token a)
+charContentChunk quote = Literal . LitString . T.pack <$> many (charContent quote)
+
 oneInterp :: forall a. (IdClass a) => LexerSpec a -> Parser [(Token a, SourcePos)]
 oneInterp LexerSpec{sStrings = StringSpec{sInterpolate = Nothing}} = mzero
-oneInterp spec@LexerSpec{sStrings = StringSpec{sInterpolate = Just (li, ri)}} =
-  char li *> f 1
+oneInterp spec@LexerSpec{sStrings = StringSpec{sInterpolate = Just (li, ri)}} = do
+  b  <- withPos $ return BeginInterp
+  ts <- char li *> f 1
+  e  <- withPos $ return EndInterp
+  return $ b : ts ++ [e]
   where
     f :: Integer -> Parser [(Token a, SourcePos)]
     f 1 = char ri *> pure [] <|> g 1
