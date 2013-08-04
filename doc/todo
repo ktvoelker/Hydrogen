@@ -2,20 +2,6 @@
 TODO
 ====
 
-Clean up the new lexer code
-
-  In H.Lexer, the main token parser,
-  of type LexerSpec a -> LexerMode -> Parser (Token a)
-
-  In H.Lexer, the skip parser, of type LexerMode -> Parser ()
-
-  The main token loop should get one token under the current mode, perform the lexer
-  mode action that was returned, and then perform a skip in the new mode.
-
-  Put one special skip at the beginning.
-
-  Throw an error if eof is reached in the wrong mode.
-
 Get rid of all uses of Monad in Lexer and Parser
 
 Convert to AParsec

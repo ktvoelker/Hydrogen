@@ -1,7 +1,8 @@
 
 module H.Lexer.Tokens
   ( keywords, ident, litInt, litFloat, litChar, litBool
-  , beginString, endString, stringContent, interpOne, beginInterp, endInterp
+  , beginString, endString, stringContent
+  , interpOne, beginInterp, endInterp, beginExtraDelim, endExtraDelim
   , beginBlockComment, endBlockComment, blockCommentContent
   , beginLineComment, endLineComment, lineCommentContent
   ) where
@@ -67,7 +68,7 @@ escapeCodes =
   map (\(e, r) -> (char e :: Parser Char) *> pure r)
     [ ('b', '\b'), ('t', '\t'), ('n', '\n'), ('f', '\f'), ('r', '\r') ]
 
-charContent :: Set Char -> Parser Char
+charContent :: [Char] -> Parser Char
 charContent specials = (char '\\' *> escape) <|> normal
   where
     escape = foldr (<|>) (unicode <|> octal <|> anyChar) escapeCodes
@@ -80,7 +81,7 @@ charContent specials = (char '\\' *> escape) <|> normal
       pure
         . chr
         $ (readDigit a * 8 ^ (2 :: Integer)) + (readDigit b * 8) + readDigit c
-    normal = noneOf $ '\\' : S.toList specials
+    normal = noneOf $ '\\' : specials
     readDigit = read . (: [])
 
 litChar :: TokenParser a
@@ -90,7 +91,6 @@ litChar LexerSpec{ sStrings = StringSpec{ sCharDelim = Just quote } } =
   . fmap (Literal . LitChar)
   . between q q
   . charContent
-  . S.fromList
   $ [quote]
   where
     q = char quote
@@ -108,40 +108,53 @@ litBool LexerSpec{ sBools = Just (false, true) } =
 beginString :: TokenParser a
 beginString = sStrings >>> sStringDelim >>> \case
   Nothing -> mzero
-  Just quote -> char quote *> pure (BeginString, Push LMString)
+  Just quote -> char quote *> pure (BeginString, [Push LMString])
 
-stringContent :: (IdClass a) => Set Char -> Parser (Token a)
-stringContent specials = StringContent . T.pack <$> many (charContent specials)
+stringContent :: (IdClass a) => TokenParser a
+stringContent spec = keepMode $ StringContent . T.pack <$> many (charContent specials)
+  where
+    ss = sStrings spec
+    specials = catMaybes [sStringDelim ss, fmap fst (sInterpMany ss), sInterpOne ss]
 
 endString :: TokenParser a
 endString = sStrings >>> sStringDelim >>> \case
   Nothing -> mzero
-  Just quote -> char quote *> pure (EndString, Pop (Just LMString))
+  Just quote -> char quote *> pure (EndString, [Pop LMString])
 
 interpOne :: TokenParser a
 interpOne = sStrings >>> sInterpOne >>> \case
   Nothing -> mzero
-  Just sigil -> char sigil *> pure (BeginInterp, Push LMInterpOne)
+  Just sigil -> char sigil *> pure (BeginInterp, [Push LMInterpOne])
 
 beginInterp :: TokenParser a
 beginInterp = sStrings >>> sInterpMany >>> \case
   Nothing -> mzero
-  Just (delim, _) -> char delim *> pure (BeginInterp, Push LMInterp)
+  Just (delim, _) -> char delim *> pure (BeginInterp, [Push LMInterp])
 
 endInterp :: TokenParser a
 endInterp = sStrings >>> sInterpMany >>> \case
   Nothing -> mzero
-  Just (_, delim) -> char delim *> pure (EndInterp, Pop (Just LMInterp))
+  Just (_, delim) -> char delim *> pure (EndInterp, [Pop LMInterp])
+
+beginExtraDelim :: TokenParser a
+beginExtraDelim = sStrings >>> sInterpMany >>> \case
+  Nothing -> mzero
+  Just (delim, _) -> char delim *> pure (Keyword $ T.singleton delim, [Push LMInterp])
+
+endExtraDelim :: TokenParser a
+endExtraDelim = sStrings >>> sInterpMany >>> \case
+  Nothing -> mzero
+  Just (_, delim) -> char delim *> pure (Keyword $ T.singleton delim, [Pop LMInterp])
 
 beginBlockComment :: TokenParser a
 beginBlockComment = sComments >>> sBlockComment >>> \case
   Nothing -> mzero
-  Just (delim, _) -> try (text delim) *> pure (BeginComment, Push LMBlockComment)
+  Just (delim, _) -> try (text delim) *> pure (BeginComment, [Push LMBlockComment])
 
 endBlockComment :: TokenParser a
 endBlockComment = sComments >>> sBlockComment >>> \case
   Nothing -> mzero
-  Just (_, delim) -> try (text delim) *> pure (EndComment, Pop (Just LMBlockComment))
+  Just (_, delim) -> try (text delim) *> pure (EndComment, [Pop LMBlockComment])
 
 blockCommentContent :: TokenParser a
 blockCommentContent = sComments >>> sBlockComment >>> \case
@@ -154,7 +167,7 @@ blockCommentContent = sComments >>> sBlockComment >>> \case
 beginLineComment :: TokenParser a
 beginLineComment = sComments >>> sLineComment >>> \case
   Nothing -> mzero
-  Just sigil -> try (text sigil) *> pure (BeginComment, Push LMLineComment)
+  Just sigil -> try (text sigil) *> pure (BeginComment, [Push LMLineComment])
 
 lineCommentContent :: TokenParser a
 lineCommentContent =
@@ -167,5 +180,5 @@ lineCommentContent =
 endLineComment :: TokenParser a
 endLineComment = sComments >>> sLineComment >>> \case
   Nothing -> mzero
-  Just _ -> char '\n' *> pure (EndComment, Pop (Just LMLineComment))
+  Just _ -> char '\n' *> pure (EndComment, [Pop LMLineComment])
 

@@ -21,7 +21,7 @@ import Text.Parsec hiding ((<|>), many, optional)
 import Text.Parsec.Text
 
 import H.Common
-import H.Lexer.Tokens hiding (withPos, tok)
+import H.Lexer.Tokens
 import H.Lexer.Types
 
 lowerAlphas, upperAlphas, alphas, digits, underscore :: Set Char
@@ -59,25 +59,52 @@ withPos parser = do
   return (ret, pos)
 
 file :: (IdClass a) => LexerSpec a -> Parser (Tokens a)
-file spec = do
-  sk
-  xs <- toks spec `sepEndBy` sk
-  eof
-  return . concat $ xs
+file spec = skippable LMNormal *> fileBody [LMNormal] spec <* eof
+
+fileBody :: (IdClass a) => [LexerMode] -> LexerSpec a -> Parser (Tokens a)
+fileBody [] _ = undefined
+fileBody ms@(m : _) spec = rec <|> base
   where
-    sk = skippable $ sComments spec
+    base = if m == LMNormal then eof *> return [] else mzero
+    rec = do
+      ((x, as), pos) <- withPos $ tok m spec
+      xs <- fileBody (foldl modeAction ms as) spec
+      return $ (x, pos) : xs
 
-toks :: (IdClass a) => LexerSpec a -> Parser (Tokens a)
-toks spec = fmap concat . many $ ((: []) <$> withPos (tok spec)) <|> litString spec
+modeAction :: [LexerMode] -> LexerModeAction -> [LexerMode]
+modeAction ms (Push m) = m : ms
+modeAction [] (Pop _) = error "Empty mode stack"
+modeAction (m : ms) (Pop m')
+  | m == m' = ms
+  | otherwise = error "Popped the wrong mode"
 
-tok :: (IdClass a) => LexerSpec a -> Parser (Token a)
-tok spec =
-  choice
-  [ keywords (sKeywords spec)
-  , ident (sIdentifiers spec)
-  , litInt (sInts spec) (sNegative spec)
-  , litFloat (sFloats spec) (sNegative spec)
-  , litChar (sStrings spec)
-  , litBool (sBools spec)
+alts :: [TokenParser a] -> TokenParser a
+alts = foldr (\a b spec -> a spec <|> b spec) (const mzero)
+
+normalToks :: (IdClass a) => TokenParser a
+normalToks =
+  alts
+  [ keywords
+  , ident
+  , litInt
+  , litFloat
+  , litChar
+  , litBool
+  , beginString
+  , beginBlockComment
+  , beginLineComment
   ]
+
+tok :: (IdClass a) => LexerMode -> TokenParser a
+tok LMNormal = normalToks
+tok LMString = alts [stringContent, endString, beginInterp]
+tok LMInterp = alts [beginExtraDelim, endInterp, normalToks]
+tok LMInterpExtraDelim = alts [endExtraDelim, normalToks]
+tok LMInterpOne = fmap (\(x, as) -> (x, Pop LMInterpOne : as)) . normalToks
+tok LMBlockComment = alts [beginBlockComment, endBlockComment, blockCommentContent]
+tok LMLineComment = alts [endLineComment, lineCommentContent]
+
+skippable :: LexerMode -> Parser ()
+skippable LMString = pure ()
+skippable _ = void $ many space
 

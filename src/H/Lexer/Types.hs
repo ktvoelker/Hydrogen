@@ -67,11 +67,11 @@ data LexerMode =
   | LMLineComment
   deriving (Eq, Ord, Enum, Bounded, Show)
 
-data LexerModeAction = NoAction | Pop (Maybe LexerMode) | Push LexerMode
+data LexerModeAction = Pop LexerMode | Push LexerMode
   deriving (Eq, Ord, Show)
 
-keepMode :: (Functor f) => f a -> f (a, LexerModeAction)
-keepMode = fmap (, NoAction)
+keepMode :: (Functor f) => f a -> f (a, [LexerModeAction])
+keepMode = fmap (, [])
 
-type TokenParser a = LexerSpec a -> Parser (Token a, LexerModeAction)
+type TokenParser a = LexerSpec a -> Parser (Token a, [LexerModeAction])
 
