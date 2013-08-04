@@ -54,6 +54,8 @@ Library
     H.Annotation.Internal
     H.Import
     H.Import.IO
+    H.Lexer.Tokens
+    H.Lexer.Types
     H.Monad
     H.Monoids
     H.Phase.CmdLine
@@ -74,6 +76,7 @@ Library
     TypeFamilies
     ScopedTypeVariables
     ExplicitForAll
+    ViewPatterns
   other-extensions:
     TemplateHaskell
 
