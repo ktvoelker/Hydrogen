@@ -81,3 +81,31 @@ oneIdentifier xs = tok ("`" ++ T.unpack xs ++ "'") $ \case
   Identifier _ xs' | xs == xs' -> Just ()
   _ -> Nothing
 
+beginString :: (IdClass a) => Parser a ()
+beginString = tokEq BeginString
+
+endString :: (IdClass a) => Parser a ()
+endString = tokEq EndString
+
+stringContent :: (IdClass a) => Parser a Text
+stringContent = tok "string content" $ \case
+  StringContent xs -> Just xs
+  _ -> Nothing
+
+beginInterp :: (IdClass a) => Parser a ()
+beginInterp = tokEq BeginInterp
+
+endInterp :: (IdClass a) => Parser a ()
+endInterp = tokEq EndInterp
+
+beginComment :: (IdClass a) => Parser a ()
+beginComment = tokEq BeginComment
+
+commentContent :: (IdClass a) => Parser a Text
+commentContent = tok "comment content" $ \case
+  CommentContent xs -> Just xs
+  _ -> Nothing
+
+endComment :: (IdClass a) => Parser a ()
+endComment = tokEq EndComment
+

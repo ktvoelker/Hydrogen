@@ -18,3 +18,5 @@ Eliminate String more completely
 
     Provide a less crazy type in Read
 
+Allow nested block comments, optionally
+
