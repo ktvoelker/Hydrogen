@@ -57,16 +57,20 @@ withPos parser = do
   return (ret, pos)
 
 file :: (IdClass a) => LexerSpec a -> Parser (Tokens a)
-file spec = skippable LMNormal *> fileBody [LMNormal] spec <* eof
+file spec = skippable (curMode ms) *> fileBody ms spec <* eof
+  where
+    ms = emptyModeStack
 
 fileBody :: (IdClass a) => [LexerMode] -> LexerSpec a -> Parser (Tokens a)
-fileBody [] _ = undefined
-fileBody ms@(m : _) spec = rec <|> base
+fileBody ms spec = rec <|> base
   where
+    m = curMode ms
     base = if m == LMNormal then eof *> return [] else mzero
     rec = do
       ((x, as), pos) <- withPos $ tok m spec
-      xs <- fileBody (foldl modeAction ms as) spec
+      let ms' = foldl modeAction ms as
+      skippable . curMode $ ms'
+      xs <- fileBody ms' spec
       return $ (x, pos) : xs
 
 modeAction :: [LexerMode] -> LexerModeAction -> [LexerMode]
@@ -95,8 +99,8 @@ normalToks =
 
 tok :: (IdClass a) => LexerMode -> TokenParser a
 tok LMNormal = normalToks
-tok LMString = alts [stringContent, endString, beginInterp]
-tok LMInterp = alts [beginExtraDelim, endInterp, normalToks]
+tok LMString = alts [endString, beginInterp, stringContent]
+tok LMInterp = alts [endInterp, beginExtraDelim, normalToks]
 tok LMInterpExtraDelim = alts [endExtraDelim, normalToks]
 tok LMInterpOne = fmap (\(x, as) -> (x, Pop LMInterpOne : as)) . normalToks
 tok LMBlockComment = alts [beginBlockComment, endBlockComment, blockCommentContent]
@@ -104,5 +108,5 @@ tok LMLineComment = alts [endLineComment, lineCommentContent]
 
 skippable :: LexerMode -> Parser ()
 skippable LMString = pure ()
-skippable _ = void $ many space
+skippable _ = spaces
 

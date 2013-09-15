@@ -67,6 +67,12 @@ data LexerMode =
   | LMLineComment
   deriving (Eq, Ord, Enum, Bounded, Show)
 
+curMode :: [LexerMode] -> LexerMode
+curMode = maybe LMNormal id . listToMaybe
+
+emptyModeStack :: [LexerMode]
+emptyModeStack = []
+
 data LexerModeAction = Pop LexerMode | Push LexerMode
   deriving (Eq, Ord, Show)
 
