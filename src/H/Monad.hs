@@ -187,6 +187,10 @@ isArtifact :: Result e -> Bool
 isArtifact (ArtifactResult _ _) = True
 isArtifact _ = False
 
+isDebug :: Result e -> Bool
+isDebug (DebugResult _) = True
+isDebug _ = False
+
 class
   ( Monad m
   , Applicative m
@@ -235,7 +239,7 @@ stage
   -> MT n e m a
 stage name (MT m) = MT $ do
   Options{..} <- ask
-  let c = if name `S.member` debugStages then id else filter isArtifact
+  let c = if name `S.member` debugStages then id else filter (not . isDebug)
   output <- censor c . dumpResult' $ m
   when (Just name == finalStage) . throwError . Right . Finished $ name
   return output

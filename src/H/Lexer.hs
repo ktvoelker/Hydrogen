@@ -48,9 +48,7 @@ tokenizeFile
    => LexerSpec a -> FilePath -> Text -> MT n e m (Tokens a)
 tokenizeFile spec name xs =
   case parse (file spec) (encodeString name) xs of
-    Left err -> do
-      report . Err ELexer Nothing Nothing . Just . show $ err
-      return []
+    Left err -> fatal . Err ELexer Nothing Nothing . Just . show $ err
     Right ts -> return ts
 
 withPos parser = do
