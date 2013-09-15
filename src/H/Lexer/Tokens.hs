@@ -111,7 +111,7 @@ beginString = sStrings >>> sStringDelim >>> \case
   Just quote -> char quote *> pure (BeginString, [Push LMString])
 
 stringContent :: (IdClass a) => TokenParser a
-stringContent spec = keepMode $ StringContent . T.pack <$> many (charContent specials)
+stringContent spec = keepMode $ StringContent . T.pack <$> many1 (charContent specials)
   where
     ss = sStrings spec
     specials = catMaybes [sStringDelim ss, fmap fst (sInterpMany ss), sInterpOne ss]
@@ -162,7 +162,7 @@ blockCommentContent = sComments >>> sBlockComment >>> \case
   Just (_, delim) ->
     keepMode
     . fmap (CommentContent . T.pack . concat)
-    $ many (try (lookAhead (text delim)) *> pure [] <|> (: []) <$> anyChar)
+    $ many1 (try (lookAhead (text delim)) *> pure [] <|> (: []) <$> anyChar)
 
 beginLineComment :: TokenParser a
 beginLineComment = sComments >>> sLineComment >>> \case
