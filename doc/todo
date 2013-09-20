@@ -2,6 +2,12 @@
 TODO
 ====
 
+Use regular expressions instead of recursive parser for the lexer
+
+  This would allow better tokenization without the risk of backtracking
+
+  Also, we could clean up the production of tokens by using a conduit
+
 Get rid of all uses of Monad in Lexer and Parser
 
 Convert to AParsec

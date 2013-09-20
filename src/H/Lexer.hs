@@ -87,11 +87,11 @@ normalToks :: (IdClass a) => TokenParser a
 normalToks =
   alts
   [ keywords
-  , ident
-  , litInt
-  , litFloat
-  , litChar
   , litBool
+  , litFloat
+  , litInt
+  , litChar
+  , ident
   , beginString
   , beginBlockComment
   , beginLineComment

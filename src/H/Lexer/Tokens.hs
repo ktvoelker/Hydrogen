@@ -35,13 +35,13 @@ sign = maybe (pure id) (option id . (*> pure negate) . text) . sNegative
 
 litInt :: TokenParser a
 litInt LexerSpec{ sInts = False } = mzero
-litInt spec@LexerSpec{ sInts = True } = keepMode $ do
+litInt spec@LexerSpec{ sInts = True } = keepMode . try $ do
   signFunc <- sign spec
   fmap (Literal . LitInt . signFunc . read) $ many1 digit
 
 litFloat :: TokenParser a
 litFloat LexerSpec{ sFloats = False } = mzero
-litFloat spec@LexerSpec{ sFloats = True } = keepMode $ do
+litFloat spec@LexerSpec{ sFloats = True } = keepMode . try $ do
   mainSignFunc <- sign spec
   (intPart, fracPart) <- withIntPart <|> withoutIntPart
   exp <- optionMaybe $ do
@@ -100,6 +100,7 @@ litBool LexerSpec{ sBools = Nothing } = mzero
 litBool LexerSpec{ sBools = Just (false, true) } =
   keepMode
   . fmap (Literal . LitBool)
+  . try
   $ choice
     [ text false *> pure False
     , text true  *> pure True
