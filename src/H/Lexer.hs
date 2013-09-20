@@ -102,7 +102,6 @@ tok LMNormal = normalToks
 tok LMString = alts [endString, beginInterp, stringContent]
 tok LMInterp = alts [endInterp, beginExtraDelim, normalToks]
 tok LMInterpExtraDelim = alts [endExtraDelim, normalToks]
-tok LMInterpOne = fmap (\(x, as) -> (x, Pop LMInterpOne : as)) . normalToks
 tok LMBlockComment = alts [beginBlockComment, endBlockComment, blockCommentContent]
 tok LMLineComment = alts [endLineComment, lineCommentContent]
 

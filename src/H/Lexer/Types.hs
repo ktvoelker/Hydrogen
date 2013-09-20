@@ -45,7 +45,6 @@ data StringSpec =
   StringSpec
   { sStringDelim :: Maybe Char
   , sCharDelim   :: Maybe Char
-  , sInterpOne   :: Maybe Char
   , sInterpMany  :: Maybe (Char, Char)
   } deriving (Eq, Ord, Show)
 
@@ -62,7 +61,6 @@ data LexerMode =
   | LMString
   | LMInterp
   | LMInterpExtraDelim
-  | LMInterpOne
   | LMBlockComment
   | LMLineComment
   deriving (Eq, Ord, Enum, Bounded, Show)

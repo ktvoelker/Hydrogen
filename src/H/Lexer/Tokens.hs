@@ -2,7 +2,7 @@
 module H.Lexer.Tokens
   ( keywords, ident, litInt, litFloat, litChar, litBool
   , beginString, endString, stringContent
-  , interpOne, beginInterp, endInterp, beginExtraDelim, endExtraDelim
+  , beginInterp, endInterp, beginExtraDelim, endExtraDelim
   , beginBlockComment, endBlockComment, blockCommentContent
   , beginLineComment, endLineComment, lineCommentContent
   ) where
@@ -114,17 +114,12 @@ stringContent :: (IdClass a) => TokenParser a
 stringContent spec = keepMode $ StringContent . T.pack <$> many1 (charContent specials)
   where
     ss = sStrings spec
-    specials = catMaybes [sStringDelim ss, fmap fst (sInterpMany ss), sInterpOne ss]
+    specials = catMaybes [sStringDelim ss, fmap fst (sInterpMany ss)]
 
 endString :: TokenParser a
 endString = sStrings >>> sStringDelim >>> \case
   Nothing -> mzero
   Just quote -> char quote *> pure (EndString, [Pop LMString])
-
-interpOne :: TokenParser a
-interpOne = sStrings >>> sInterpOne >>> \case
-  Nothing -> mzero
-  Just sigil -> char sigil *> pure (BeginInterp, [Push LMInterpOne])
 
 beginInterp :: TokenParser a
 beginInterp = sStrings >>> sInterpMany >>> \case
