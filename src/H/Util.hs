@@ -120,3 +120,8 @@ showText = T.pack . show
  
 type FileMap a = Map FilePath a
 
+sequenceWhileJust :: (Monad m) => [m (Maybe a)] -> m [a]
+sequenceWhileJust [] = return []
+sequenceWhileJust (m : ms) =
+  m >>= maybe (return []) (\x -> liftM (x :) $ sequenceWhileJust ms)
+

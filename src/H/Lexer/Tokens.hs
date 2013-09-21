@@ -9,8 +9,7 @@ module H.Lexer.Tokens
 
 import qualified Data.Set as S
 import qualified Data.Text as T
-import Text.Parsec hiding ((<|>), many, optional)
-import Text.Parsec.Text
+import Text.Regex.Applicative
 
 import H.Common
 import H.Lexer.Types
@@ -19,7 +18,7 @@ text :: Text -> Parser Text
 text xs = string (T.unpack xs) *> pure xs
 
 keywords :: TokenParser a
-keywords (sKeywords -> ks) = keepMode . fmap Keyword . choice . map (try . text) $ ks
+keywords (sKeywords -> ks) = keepMode . fmap Keyword . choice . map text $ ks
 
 ident :: (IdClass a) => TokenParser a
 ident = keepMode . choice . map oneIdent . sIdentifiers
@@ -34,34 +33,25 @@ sign :: (Num b) => LexerSpec a -> Parser (b -> b)
 sign = maybe (pure id) (option id . (*> pure negate) . text) . sNegative
 
 litInt :: TokenParser a
-litInt LexerSpec{ sInts = False } = mzero
-litInt spec@LexerSpec{ sInts = True } = keepMode . try $ do
-  signFunc <- sign spec
-  fmap (Literal . LitInt . signFunc . read) $ many1 digit
+litInt LexerSpec{ sInts = False } = empty
+litInt spec@LexerSpec{ sInts = True } = keepMode $ f <$> sign spec <*> many1 digit
+  where
+    f signFunc = Literal . LitInt . signFunc . read
 
 litFloat :: TokenParser a
-litFloat LexerSpec{ sFloats = False } = mzero
-litFloat spec@LexerSpec{ sFloats = True } = keepMode . try $ do
-  mainSignFunc <- sign spec
-  (intPart, fracPart) <- withIntPart <|> withoutIntPart
-  exp <- optionMaybe $ do
-    _ <- oneOf "eE"
-    expSignFunc <- sign spec
-    digs <- many1 digit
-    pure $ (expSignFunc . read $ digs :: Integer)
-  let intVal = mainSignFunc . read $ intPart :: Integer
-  let fracVal = (read fracPart :: Integer) % (10 ^ length fracPart)
-  pure . Literal . LitFloat $ (fromInteger intVal + fracVal) * (10 ^ maybe 0 id exp)
+litFloat LexerSpec{ sFloats = False } = empty
+litFloat spec@LexerSpec{ sFloats = True } =
+  keepMode $ f <$> sign spec <*> (withIntPart <|> withoutIntPart) <*> g'
   where
-    withIntPart = do
-      intPart <- many1 digit
-      _ <- char '.'
-      fracPart <- many digit
-      pure (intPart, fracPart)
-    withoutIntPart = do
-      _ <- char '.'
-      fracPart <- many1 digit
-      pure ("0", fracPart)
+    f mainSignFunc (intPart, fracPart) exp =
+      Literal . LitFloat $ (fromInteger intVal + fracVal) * (10 ^ maybe 0 id exp)
+      where
+        intVal = mainSignFunc . read $ intPart :: Integer
+        fracVal = (read fracPart :: Integer) % (10 ^ length fracPart)
+    g expSignFunc digs = expSignFunc . read $ digs :: Integer
+    g' = optionMaybe $ g <$> (oneOf "eE" *> sign spec) <*> many1 digit
+    withIntPart = (,) <$> many1 digit <*> (char '.' *> many digit)
+    withoutIntPart = ("0",) <$> (char '.' *> many1 digit)
 
 escapeCodes :: [Parser Char]
 escapeCodes =
@@ -72,20 +62,17 @@ charContent :: [Char] -> Parser Char
 charContent specials = (char '\\' *> escape) <|> normal
   where
     escape = foldr (<|>) (unicode <|> octal <|> anyChar) escapeCodes
-    unicode = do
-      _ <- char 'u' :: Parser Char
-      count 4 hexDigit >>= pure . chr . read . ("0x" ++)
-    octal = do
-      a <- oneOf ['0' .. '3']
-      [b, c] <- count 2 . oneOf $ ['0' .. '7']
-      pure
-        . chr
-        $ (readDigit a * 8 ^ (2 :: Integer)) + (readDigit b * 8) + readDigit c
+    octal = f <$> oneOf ['0' .. '3'] <*> (count 2 . oneOf $ ['0' .. '7'])
+    f a [b, c] =
+      chr $ (readDigit a * 8 ^ (2 :: Integer)) + (readDigit b * 8) + readDigit c
+    f _ _ = undefined
+    unicode =
+      chr . read . ("0x" ++) <$> ((char 'u' :: Parser Char) *> count 4 hexDigit)
     normal = noneOf $ '\\' : specials
     readDigit = read . (: [])
 
 litChar :: TokenParser a
-litChar LexerSpec{ sStrings = StringSpec{ sCharDelim = Nothing } } = mzero
+litChar LexerSpec{ sStrings = StringSpec{ sCharDelim = Nothing } } = empty
 litChar LexerSpec{ sStrings = StringSpec{ sCharDelim = Just quote } } =
   keepMode
   . fmap (Literal . LitChar)
@@ -96,11 +83,10 @@ litChar LexerSpec{ sStrings = StringSpec{ sCharDelim = Just quote } } =
     q = char quote
 
 litBool :: TokenParser a
-litBool LexerSpec{ sBools = Nothing } = mzero
+litBool LexerSpec{ sBools = Nothing } = empty
 litBool LexerSpec{ sBools = Just (false, true) } =
   keepMode
   . fmap (Literal . LitBool)
-  . try
   $ choice
     [ text false *> pure False
     , text true  *> pure True
@@ -108,7 +94,7 @@ litBool LexerSpec{ sBools = Just (false, true) } =
 
 beginString :: TokenParser a
 beginString = sStrings >>> sStringDelim >>> \case
-  Nothing -> mzero
+  Nothing -> empty
   Just quote -> char quote *> pure (BeginString, [Push LMString])
 
 stringContent :: (IdClass a) => TokenParser a
@@ -119,51 +105,51 @@ stringContent spec = keepMode $ StringContent . T.pack <$> many1 (charContent sp
 
 endString :: TokenParser a
 endString = sStrings >>> sStringDelim >>> \case
-  Nothing -> mzero
+  Nothing -> empty
   Just quote -> char quote *> pure (EndString, [Pop LMString])
 
 beginInterp :: TokenParser a
 beginInterp = sStrings >>> sInterpMany >>> \case
-  Nothing -> mzero
+  Nothing -> empty
   Just (delim, _) -> char delim *> pure (BeginInterp, [Push LMInterp])
 
 endInterp :: TokenParser a
 endInterp = sStrings >>> sInterpMany >>> \case
-  Nothing -> mzero
+  Nothing -> empty
   Just (_, delim) -> char delim *> pure (EndInterp, [Pop LMInterp])
 
 beginExtraDelim :: TokenParser a
 beginExtraDelim = sStrings >>> sInterpMany >>> \case
-  Nothing -> mzero
+  Nothing -> empty
   Just (delim, _) -> char delim *> pure (Keyword $ T.singleton delim, [Push LMInterp])
 
 endExtraDelim :: TokenParser a
 endExtraDelim = sStrings >>> sInterpMany >>> \case
-  Nothing -> mzero
+  Nothing -> empty
   Just (_, delim) -> char delim *> pure (Keyword $ T.singleton delim, [Pop LMInterp])
 
 beginBlockComment :: TokenParser a
 beginBlockComment = sComments >>> sBlockComment >>> \case
-  Nothing -> mzero
-  Just (delim, _) -> try (text delim) *> pure (BeginComment, [Push LMBlockComment])
+  Nothing -> empty
+  Just (delim, _) -> text delim *> pure (BeginComment, [Push LMBlockComment])
 
 endBlockComment :: TokenParser a
 endBlockComment = sComments >>> sBlockComment >>> \case
-  Nothing -> mzero
-  Just (_, delim) -> try (text delim) *> pure (EndComment, [Pop LMBlockComment])
+  Nothing -> empty
+  Just (_, delim) -> text delim *> pure (EndComment, [Pop LMBlockComment])
 
 blockCommentContent :: TokenParser a
 blockCommentContent = sComments >>> sBlockComment >>> \case
-  Nothing -> mzero
-  Just (_, delim) ->
+  Nothing -> empty
+  Just _ ->
     keepMode
     . fmap (CommentContent . T.pack . concat)
-    $ many1 (try (lookAhead (text delim)) *> pure [] <|> (: []) <$> anyChar)
+    $ few ((: []) <$> anyChar)
 
 beginLineComment :: TokenParser a
 beginLineComment = sComments >>> sLineComment >>> \case
-  Nothing -> mzero
-  Just sigil -> try (text sigil) *> pure (BeginComment, [Push LMLineComment])
+  Nothing -> empty
+  Just sigil -> text sigil *> pure (BeginComment, [Push LMLineComment])
 
 lineCommentContent :: TokenParser a
 lineCommentContent =
@@ -175,6 +161,6 @@ lineCommentContent =
 
 endLineComment :: TokenParser a
 endLineComment = sComments >>> sLineComment >>> \case
-  Nothing -> mzero
+  Nothing -> empty
   Just _ -> char '\n' *> pure (EndComment, [Pop LMLineComment])
 

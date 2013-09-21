@@ -40,7 +40,8 @@ Library
     system-filepath,
     bytestring,
     monad-control,
-    transformers-base
+    transformers-base,
+    regex-applicative
   exposed-modules:
     H.Annotation
     H.Common
