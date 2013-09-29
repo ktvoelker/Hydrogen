@@ -2,6 +2,18 @@
 TODO
 ====
 
+Scope maintenance is just a specialized, separate ReaderT - parameterized on the
+various types involved, so that it can be used to store anything
+
+  Put this in H.Monad.Scope
+
+  In addition to keeping the environment mapping in the reader, also keep a stack
+  of entries (which is our case will be either Rec | Def Unique) - and require a
+  new entry when descending a level
+
+    Require that the stack entries be in a typeclass that provides a function:
+      isNewScope :: a -> Bool
+
 Get rid of all uses of Monad in Parser
 
 Convert to AParsec

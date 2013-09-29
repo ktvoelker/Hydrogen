@@ -14,21 +14,20 @@ module H.Monad
   , writeResults
   , writeResult
   , isArtifact
+  , nextUnique
   , MT()
   , MonadM(..)
-  , nextUnique
   , runMT
   , execMT
   , stage
   ) where
 
--- import Control.Monad.Base
--- import Control.Monad.Trans.Control
 import qualified Data.Set as S
 import Text.Parsec.Pos (SourcePos())
 import System.IO
 
 import H.Import
+import H.Monad.Types
 import H.Util
 
 class (Eq a, Ord a, Enum a, Bounded a, Show a) => StageNames a where
@@ -38,13 +37,6 @@ data Options n =
   { finalStage  :: Maybe n
   , debugStages :: S.Set n
   } deriving (Eq, Ord, Show)
-
-data MTState =
-  MTState
-  { mtNextUnique :: Integer
-  }
-
-emptyMTState = MTState 0
 
 type MTInner n e m =
   ReaderT (Options n)
@@ -99,8 +91,8 @@ fatal err = liftMT $ report err >> MT (throwError . Left $ err)
 report :: (MonadM m) => Err (LowerE m) -> m ()
 report = liftMT . MT . tell . (: []) . ErrResult
 
-internal :: (MonadM m, Show a) => a -> m ()
-internal = report . Err EInternal Nothing Nothing . Just . show
+internal :: (MonadM m, Show a) => a -> m b
+internal = fatal . Err EInternal Nothing Nothing . Just . show
 
 log :: (MonadM m) => String -> m ()
 log = report . Err EOutput Nothing Nothing . Just
@@ -130,27 +122,6 @@ instance MonadTrans (MT n e) where
 
 instance (Applicative m, MonadIO m) => MonadIO (MT n e m) where
   liftIO = MT . liftIO
-
-{-
-instance (MonadBase b m) => MonadBase b (MT n e m) where
-  liftBase = liftBaseDefault
-
--- Copied from the documentation for Control.Monad.Trans.Control
-instance MonadTransControl (MT n e) where
-  newtype StT (MT n e) a = StMT { unStMT :: StT (
-    ReaderT (Options n)
-    (ErrorT (Either (Err e) (Finished n))
-    (StateT MTState
-    (WriterT [Result e] m)))) a }
-  liftWith = defaultLiftWith MT getMT StMT
-  restoreT = defaultRestoreT MT unStMT
-
--- Copied from the documentation for Control.Monad.Trans.Control
-instance (MonadBaseControl b m) => MonadBaseControl b (MT n e m) where
-  newtype StM (MT n e m) a = StMT' { unStMT' :: ComposeSt (MT n e) m a }
-  liftBaseWith = defaultLiftBaseWith StMT'
-  restoreM = defaultRestoreM unStMT'
--}
 
 instance (Functor m) => Functor (MT n e m) where
   fmap f (MT m) = MT . fmap f $ m
@@ -210,12 +181,14 @@ instance (Functor m, Applicative m, Monad m) => MonadM (MT n e m) where
   type LowerM (MT n e m) = m
   liftMT = id
 
-nextUnique :: (MonadM m) => m Integer
-nextUnique = liftMT . MT $ do
-  s <- get
-  let u = mtNextUnique s
-  put $ s { mtNextUnique = u + 1 }
-  return u
+instance (Functor m, Applicative m, Monad m) => MonadM (MTInner n e m) where
+  type LowerN (MTInner n e m) = n
+  type LowerE (MTInner n e m) = e
+  type LowerM (MTInner n e m) = m
+  liftMT (MT inner) = inner
+
+nextUnique :: (Functor m, Monad m) => Text -> MTInner n e m Unique
+nextUnique name = Unique <$> (mtNextUnique %%= \u -> (u, u + 1)) <*> pure name
 
 runMT
   :: (Monad m)

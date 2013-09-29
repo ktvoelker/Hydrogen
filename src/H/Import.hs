@@ -10,6 +10,7 @@ module H.Import
   , module Control.Monad.Writer
   , module Data.Char
   , module Data.Either
+  , module Data.Function
   , module Data.Lens
   , module Data.List
   , module Data.Map
@@ -35,6 +36,7 @@ import Control.Monad.State hiding (forM, mapM, sequence)
 import Control.Monad.Writer hiding (forM, mapM, sequence)
 import Data.Char
 import Data.Either
+import Data.Function hiding (id, (.))
 import Data.Lens
 import Data.List hiding (mapAccumL, mapAccumR, find, insert, union, stripPrefix)
 import Data.Map (Map())

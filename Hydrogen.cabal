@@ -47,6 +47,8 @@ Library
     H.Common
     H.Common.IO
     H.Lexer
+    H.Monad.RefGraph
+    H.Monad.Scope
     H.Parser
     H.Phase
     H.PrettyPrint
@@ -58,6 +60,7 @@ Library
     H.Lexer.Tokens
     H.Lexer.Types
     H.Monad
+    H.Monad.Types
     H.Monoids
     H.Phase.CmdLine
     H.Util
