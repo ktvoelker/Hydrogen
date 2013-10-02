@@ -2,8 +2,6 @@
 TODO
 ====
 
-Get rid of all uses of Monad in Parser
-
 Convert to AParsec
 
 Convert Lexer to use conduit
