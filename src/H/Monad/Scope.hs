@@ -1,20 +1,23 @@
 
 module H.Monad.Scope where
 
--- import H.Common
+import qualified Data.Map as M
 
-{-
-findNameInScope :: (MonadM m) => Text -> m Unique
-findNameInScope name =
-  inner
-    $ (msum . map (M.lookup name) <$> access mtScopeStack)
-      >>=
-      maybe (nextUnique name) return
+import H.Common
 
--- TODO make this exception-safe
-enterScope :: (MonadM m) => [Text] -> m a -> m a
-enterScope names m = do
-  us <- inner $ M.fromList <$> mapM (\name -> (name,) <$> nextUnique name) names
-  inner (mtScopeStack %= (us :)) *> m <* inner (mtScopeStack %= drop 1)
--}
+type ScopeT k v = ReaderT (Map k v)
+
+findInScope :: (MonadM m, MonadReader (Map k v) m, Ord k, Show k) => k -> m v
+findInScope name = join . (liftM $ maybe err return) . findInScopeMaybe $ name
+  where
+    err = fatal $ Err ENotFound Nothing (Just $ show name) Nothing
+
+findInScopeMaybe :: (MonadReader (Map k v) m, Ord k) => k -> m (Maybe v)
+findInScopeMaybe = ($ ask) . liftM . M.lookup
+
+scope :: (MonadReader (Map k v) m, Ord k) => [(k, m v)] -> m a -> m a
+scope = undefined
+
+scope' :: (MonadReader (Map k v) m, Ord k) => m v -> [k] -> m a -> m a
+scope' = (scope .) . flip zip . repeat
 

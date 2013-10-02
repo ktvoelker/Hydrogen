@@ -48,7 +48,8 @@ newtype MT n e m a = MT { getMT :: MTInner n e m a }
 
 newtype Finished n = Finished n deriving (Eq, Ord, Show)
 
-data ErrType e = EUnknown | EInternal | ELexer | EParser | EOutput | ECustom e
+data ErrType e =
+  EUnknown | EInternal | ELexer | EParser | EOutput | ENotFound | ECustom e
   deriving (Eq, Ord, Show)
 
 instance (Bounded e) => Bounded (ErrType e) where
@@ -67,7 +68,8 @@ instance (Enum e) => Enum (ErrType e) where
   fromEnum ELexer = 2
   fromEnum EParser = 3
   fromEnum EOutput = 4
-  fromEnum (ECustom e) = fromEnum e + 5
+  fromEnum ENotFound = 5
+  fromEnum (ECustom e) = fromEnum e + 6
 
 data Err e =
   Err
