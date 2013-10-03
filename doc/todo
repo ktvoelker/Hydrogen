@@ -2,8 +2,6 @@
 TODO
 ====
 
-Convert to AParsec
-
 Convert Lexer to use conduit
 
 Think about single-token interpolation more deeply

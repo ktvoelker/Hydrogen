@@ -5,8 +5,9 @@ module H.Lexer
   , alphas
   , digits
   , underscore
-  , Token(..)
-  , Literal(..)
+  , Token
+  , TokenType(..)
+  , TokenData(..)
   , IdClass
   , LexerSpec(..)
   , StringSpec(..)
@@ -17,7 +18,7 @@ module H.Lexer
 
 import qualified Data.Map as M
 import qualified Data.Set as S
-import Text.Parsec.Pos (SourcePos, updatePosString)
+import Text.Parsec.Applicative.Pos
 import Text.Regex.Applicative
 
 import H.Common

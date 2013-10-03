@@ -4,7 +4,7 @@ module H.Lexer.Types where
 
 import Data.Lens.Template
 import qualified Data.Text as T
-import Text.Parsec.Pos (SourcePos, initialPos)
+import Text.Parsec.Applicative.Pos
 import Text.Regex.Applicative
 
 import H.Common
@@ -50,26 +50,34 @@ char = sym
 anyChar :: Parser Char
 anyChar = anySym
 
-data Token a =
+data TokenType a =
     Keyword Text
-  | Identifier a Text
-  | Literal Literal
+  | Identifier a
+  | LitChar
+  | LitInt
+  | LitFloat
+  | LitBool
   | BeginString 
-  | StringContent Text
+  | StringContent
   | EndString
   | BeginInterp
   | EndInterp
   | BeginComment
-  | CommentContent Text
+  | CommentContent
   | EndComment
   deriving (Eq, Ord, Show)
 
-data Literal =
-    LitChar Char
-  | LitInt Integer
-  | LitFloat Rational
-  | LitBool Bool
+data TokenData =
+    NoData
+  | TextData  { textData  :: Text     }
+  | CharData  { charData  :: Char     }
+  | IntData   { intData   :: Integer  }
+  | FloatData { floatData :: Rational }
+  | BoolData  { boolData  :: Bool     }
   deriving (Eq, Ord, Show)
+
+type Token a = (TokenType a, TokenData)
+
 
 class (Eq a, Ord a, Enum a, Bounded a, Show a) => IdClass a where
 

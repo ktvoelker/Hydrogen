@@ -2,110 +2,89 @@
 module H.Parser where
 
 import qualified Data.Map as M
-import qualified Data.Text as T
-import Text.Parsec hiding (parse, (<|>), many, optional)
-import qualified Text.Parsec as P
+import Text.Parsec.Applicative hiding (Parser, parse)
+import Text.Parsec.Applicative.Pos
+import qualified Text.Parsec.Applicative as P
 
 import H.Common
-import H.Lexer (Token(..), Literal(..), IdClass(), Tokens)
+import H.Lexer (TokenType(..), TokenData(..), IdClass(), Tokens)
 
-type Parser a = Parsec (Tokens a) ()
+type Parser s a = P.Parser s (TokenType a) TokenData
 
-instance MonadSourcePos (Parser a) where
+instance SourcePosEffect (Parser s a) where
   getSourcePos = getPosition
 
 parse
-  :: (Applicative m, Monad m)
-  => Parser a b
+  :: (Eq a, Applicative m, Monad m)
+  => Parser s a b
   -> FileMap (Tokens a)
   -> MT n e m (FileMap b)
 parse = (sequence .) . (M.mapWithKey . parseFile)
 
 parseFile
-  :: (Applicative m, Monad m)
-  => Parser a b
+  :: (Eq a, Applicative m, Monad m)
+  => Parser s a b
   -> FilePath
   -> Tokens a
   -> MT n e m b
-parseFile file fp xs = case P.parse file (encodeString fp) xs of
+parseFile file _ xs = case P.parse file . map fst $ xs of
   Left err -> fatal . Err EParser Nothing Nothing . Just . show $ err
   Right decl -> return decl
 
-tok :: (IdClass a) => String -> (Token a -> Maybe b) -> Parser a b
-tok msg = (<?> msg) . token (show . fst) snd . (. fst)
-
-tokWhen :: (IdClass a) => String -> (Token a -> Bool) -> Parser a (Token a)
-tokWhen msg pred = tok msg $ \t -> if pred t then Just t else Nothing
-
-tokEq :: (IdClass a) => Token a -> Parser a ()
-tokEq t = tokWhen (show t) (== t) >> return ()
-
-delimit :: (IdClass a) => Text -> Text -> Parser a b -> Parser a b
+delimit :: (IdClass a) => Text -> Text -> Parser s a b -> Parser s a b
 delimit ld rd = between (kw ld) (kw rd)
 
-kw :: (IdClass a) => Text -> Parser a ()
-kw = tokEq . Keyword
+kw :: (IdClass a) => Text -> Parser s a ()
+kw = tok . Keyword
 
-litInt :: (IdClass a) => Parser a Integer
-litInt = tok "integer" $ \case
-  Literal (LitInt n) -> Just n
-  _ -> Nothing
+litInt :: (IdClass a) => Parser s a Integer
+litInt = intData . snd <$> token LitInt
 
-litFloat :: (IdClass a) => Parser a Rational
-litFloat = tok "float" $ \case
-  Literal (LitFloat f) -> Just f
-  _ -> Nothing
+litFloat :: (IdClass a) => Parser s a Rational
+litFloat = floatData . snd <$> token LitFloat
 
-litChar :: (IdClass a) => Parser a Char
-litChar = tok "character" $ \case
-  Literal (LitChar c) -> Just c
-  _ -> Nothing
+litChar :: (IdClass a) => Parser s a Char
+litChar = charData . snd <$> token LitChar
 
-litBool :: (IdClass a) => Parser a Bool
-litBool = tok "Boolean" $ \case
-  Literal (LitBool b) -> Just b
-  _ -> Nothing
+litBool :: (IdClass a) => Parser s a Bool
+litBool = boolData . snd <$> token LitBool
 
-identifier :: (IdClass a) => a -> Parser a Text
-identifier cls = tok ("identifier (" ++ show cls ++ ")") $ \case
-  Identifier cls' xs | cls == cls' -> Just xs
-  _ -> Nothing
+identifier :: (IdClass a) => a -> Parser s a Text
+identifier = (textData . snd <$>) . token . Identifier
 
-anyIdentifier :: (IdClass a) => Parser a (a, Text)
-anyIdentifier = tok "identifier (any)" $ \case
-  Identifier cls xs -> Just (cls, xs)
-  _ -> Nothing
+anyIdentifier :: (IdClass a) => Parser s a (a, Text)
+anyIdentifier = fmap f . choice $ map (token . Identifier) [minBound .. maxBound]
+  where
+    f (Identifier cls, TextData name) = (cls, name)
+    f _ = undefined
 
-oneIdentifier :: (IdClass a) => Text -> Parser a ()
-oneIdentifier xs = tok ("`" ++ T.unpack xs ++ "'") $ \case
-  Identifier _ xs' | xs == xs' -> Just ()
-  _ -> Nothing
+tok :: (Eq a) => TokenType a -> Parser s a ()
+tok = (f <$>) . token
+  where
+    f (_, NoData) = ()
+    f _ = undefined
 
-beginString :: (IdClass a) => Parser a ()
-beginString = tokEq BeginString
+beginString :: (IdClass a) => Parser s a ()
+beginString = tok BeginString
 
-endString :: (IdClass a) => Parser a ()
-endString = tokEq EndString
+endString :: (IdClass a) => Parser s a ()
+endString = tok EndString
 
-stringContent :: (IdClass a) => Parser a Text
-stringContent = tok "string content" $ \case
-  StringContent xs -> Just xs
-  _ -> Nothing
+stringContent :: (IdClass a) => Parser s a Text
+stringContent = textData . snd <$> token StringContent
 
-beginInterp :: (IdClass a) => Parser a ()
-beginInterp = tokEq BeginInterp
+beginInterp :: (IdClass a) => Parser s a ()
+beginInterp = tok BeginInterp
 
-endInterp :: (IdClass a) => Parser a ()
-endInterp = tokEq EndInterp
+endInterp :: (IdClass a) => Parser s a ()
+endInterp = tok EndInterp
 
-beginComment :: (IdClass a) => Parser a ()
-beginComment = tokEq BeginComment
+beginComment :: (IdClass a) => Parser s a ()
+beginComment = tok BeginComment
 
-commentContent :: (IdClass a) => Parser a Text
-commentContent = tok "comment content" $ \case
-  CommentContent xs -> Just xs
-  _ -> Nothing
+commentContent :: (IdClass a) => Parser s a Text
+commentContent = textData . snd <$> token CommentContent
 
-endComment :: (IdClass a) => Parser a ()
-endComment = tokEq EndComment
+endComment :: (IdClass a) => Parser s a ()
+endComment = tok EndComment
 

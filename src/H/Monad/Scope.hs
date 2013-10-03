@@ -7,6 +7,9 @@ import H.Common
 
 type ScopeT k v = ReaderT (Map k v)
 
+runScopeT :: (Ord k) => ScopeT k v m a -> m a
+runScopeT = flip runReaderT M.empty
+
 findInScope :: (MonadM m, MonadReader (Map k v) m, Ord k, Show k) => k -> m v
 findInScope name = join . (liftM $ maybe err return) . findInScopeMaybe $ name
   where
@@ -18,6 +21,6 @@ findInScopeMaybe = ($ ask) . liftM . M.lookup
 scope :: (MonadReader (Map k v) m, Ord k) => [(k, m v)] -> m a -> m a
 scope = undefined
 
-scope' :: (MonadReader (Map k v) m, Ord k) => m v -> [k] -> m a -> m a
-scope' = (scope .) . flip zip . repeat
+scope' :: (MonadReader (Map k v) m, Ord k) => (k -> m v) -> [k] -> m a -> m a
+scope' f ks = scope . zip ks . map f $ ks
 

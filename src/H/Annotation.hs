@@ -7,7 +7,7 @@ module H.Annotation
 
 import Control.Comonad.Trans.Store
 import Language.Haskell.TH
-import Text.Parsec.Pos (SourcePos())
+import Text.Parsec.Applicative.Pos
 
 import H.Import
 import H.Annotation.Internal
@@ -103,10 +103,10 @@ mkRunLensMatch' name n = do
       $ VarE oldAnnName
       ) []
 
-class (Monad m) => MonadSourcePos m where
-  getSourcePos :: m SourcePos
+class SourcePosEffect f where
+  getSourcePos :: f SourcePos
 
-locate :: (Annotated a, MonadSourcePos m) => m a -> m a
+locate :: (Annotated a, SourcePosEffect m, Monad m) => m a -> m a
 locate m = do
   pos <- getSourcePos
   ret <- m
