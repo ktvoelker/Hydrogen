@@ -83,6 +83,7 @@ Library
     ScopedTypeVariables
     ExplicitForAll
     ViewPatterns
+    OverloadedStrings
   other-extensions:
     TemplateHaskell
 

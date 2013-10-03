@@ -134,8 +134,9 @@ instance (MonadM m) => MonadM (ReaderT r m) where
   type LowerM (ReaderT r m) = LowerM m
   liftMT = lift . liftMT
 
-nextUnique :: (Applicative m, Monad m) => Text -> MT n e m Unique
-nextUnique name = MT $ Unique <$> (mtNextUnique %%= \u -> (u, u + 1)) <*> pure name
+nextUnique :: (MonadM m) => Text -> m Unique
+nextUnique name =
+  liftMT . MT $ Unique <$> (mtNextUnique %%= \u -> (u, u + 1)) <*> pure name
 
 runMT
   :: (Monad m)

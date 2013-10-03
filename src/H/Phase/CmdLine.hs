@@ -10,7 +10,7 @@ import H.Common
 inputs :: Term [String]
 inputs =
   value
-  . posRight 0 []
+  . posLeft 0 []
   $ posInfo { posName = "INPUT", posDoc = "Use these files as inputs" }
 
 showStageName :: (StageNames n) => n -> String
@@ -51,6 +51,16 @@ dump =
     , optDoc  = "Print the output of this phase"
     }
 
+phase :: (StageNames n) => n -> Term n
+phase def =
+  (getStageName <$>)
+  . value
+  . opt (PhaseArg def)
+  $ (optInfo ["phase", "p"])
+    { optName = "PHASE"
+    , optDoc  = "Stop after this phase"
+    }
+
 instance (ArgVal (PhaseArg n)) => ArgVal (Maybe (PhaseArg n)) where
   converter = (parser, printer)
     where
@@ -59,14 +69,4 @@ instance (ArgVal (PhaseArg n)) => ArgVal (Maybe (PhaseArg n)) where
         Right val -> Right (Just val)
       printer Nothing = text "Nothing"
       printer (Just pa) = text "Just" <+> snd converter pa
-
-phase :: (StageNames n) => Term n
-phase =
-  (getStageName <$>)
-  . required
-  . pos 0 Nothing
-  $ posInfo
-    { posName = "PHASE"
-    , posDoc  = "Write the output of this phase to the output file"
-    }
 

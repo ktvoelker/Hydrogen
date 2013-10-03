@@ -65,7 +65,24 @@ data TokenType a =
   | BeginComment
   | CommentContent
   | EndComment
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord)
+
+instance (Show a) => Show (TokenType a) where
+  showsPrec p = \case
+    Keyword xs     -> ("'" ++) . (T.unpack xs ++) . ("'" ++)
+    Identifier a   -> ("ID[" ++) . showsPrec p a . ("]" ++)
+    LitChar        -> ("CHAR" ++)
+    LitInt         -> ("INT" ++)
+    LitFloat       -> ("FLOAT" ++)
+    LitBool        -> ("BOOL" ++)
+    BeginString    -> ("BEGIN-STR" ++)
+    StringContent  -> ("STRING-CONTENT" ++)
+    EndString      -> ("END-STR" ++)
+    BeginInterp    -> ("BEGIN-INTERP" ++)
+    EndInterp      -> ("END-INTERP" ++)
+    BeginComment   -> ("BEGIN-COMMENT" ++)
+    CommentContent -> ("COMMENT-CONTENT" ++)
+    EndComment     -> ("END-COMMENT" ++)
 
 data TokenData =
     NoData
