@@ -1,7 +1,7 @@
 
 module H.Monad.Internal.Errors where
 
-import Text.Parsec.Applicative.Pos
+import Text.Parsec.Applicative.Types
 
 import H.Import
 

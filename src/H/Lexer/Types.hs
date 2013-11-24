@@ -4,7 +4,7 @@ module H.Lexer.Types where
 
 import Data.Lens.Template
 import qualified Data.Text as T
-import Text.Parsec.Applicative.Pos
+import Text.Parsec.Applicative.Types
 import Text.Regex.Applicative
 
 import H.Common
@@ -93,8 +93,12 @@ data TokenData =
   | BoolData  { boolData  :: Bool     }
   deriving (Eq, Ord, Show)
 
-type Token a = (TokenType a, TokenData)
+type Token a = (TokenType a, WithSourcePos TokenData)
 
+tokenData :: Token a -> TokenData
+tokenData = (wspValue ^$) . snd
+
+type RawToken a = (TokenType a, TokenData)
 
 class (Eq a, Ord a, Enum a, Bounded a, Show a) => IdClass a where
 
@@ -123,7 +127,7 @@ data CommentSpec =
   , sBlockComment :: Maybe (Text, Text)
   } deriving (Eq, Ord, Show)
 
-type Tokens a = [(Token a, SourcePos)]
+type Tokens a = [Token a]
 
 data LexerMode =
     LMNormal
@@ -146,7 +150,7 @@ data LexerModeAction = Pop LexerMode | Push LexerMode
 keepMode :: (Functor f) => f a -> f (a, [LexerModeAction])
 keepMode = fmap (, [])
 
-type TokenParser a = LexerSpec a -> Parser (Token a, [LexerModeAction])
+type TokenParser a = LexerSpec a -> Parser (RawToken a, [LexerModeAction])
 
 data TokenizerState =
   TokenizerState
@@ -155,8 +159,9 @@ data TokenizerState =
   , _tsInput     :: String
   } deriving (Show)
 
-emptyTokenizerState :: String -> Text -> TokenizerState
-emptyTokenizerState name = TokenizerState emptyModeStack (initialPos name) . T.unpack
+emptyTokenizerState :: Text -> Text -> TokenizerState
+emptyTokenizerState name =
+  TokenizerState emptyModeStack (initialPos $ Just name) . T.unpack
 
 makeLenses [''TokenizerState]
 

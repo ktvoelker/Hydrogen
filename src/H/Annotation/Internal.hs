@@ -3,7 +3,7 @@
 module H.Annotation.Internal where
 
 import Data.Lens.Template
-import Text.Parsec.Applicative.Pos
+import Text.Parsec.Applicative.Types
 
 import H.Import
 

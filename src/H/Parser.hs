@@ -3,13 +3,12 @@ module H.Parser where
 
 import qualified Data.Map as M
 import Text.Parsec.Applicative hiding (Parser, parse)
-import Text.Parsec.Applicative.Pos
 import qualified Text.Parsec.Applicative as P
 
 import H.Common
-import H.Lexer (TokenType(..), TokenData(..), IdClass(), Tokens)
+import H.Lexer (TokenType(..), TokenData(..), IdClass(), Tokens, tokenData)
 
-type Parser s a = P.Parser s (TokenType a) TokenData
+type Parser s a = P.Parser s (TokenType a) (WithSourcePos TokenData)
 
 instance SourcePosEffect (Parser s a) where
   getSourcePos = getPosition
@@ -27,7 +26,7 @@ parseFile
   -> FilePath
   -> Tokens a
   -> MT n e m b
-parseFile file _ xs = case P.parse file . map fst $ xs of
+parseFile file _ xs = case P.parse file xs of
   Left err -> fatal . Err EParser Nothing Nothing . Just . show $ err
   Right decl -> return decl
 
@@ -38,30 +37,30 @@ kw :: (IdClass a) => Text -> Parser s a ()
 kw = tok . Keyword
 
 litInt :: (IdClass a) => Parser s a Integer
-litInt = intData . snd <$> token LitInt
+litInt = intData . tokenData <$> token LitInt
 
 litFloat :: (IdClass a) => Parser s a Rational
-litFloat = floatData . snd <$> token LitFloat
+litFloat = floatData . tokenData <$> token LitFloat
 
 litChar :: (IdClass a) => Parser s a Char
-litChar = charData . snd <$> token LitChar
+litChar = charData . tokenData <$> token LitChar
 
 litBool :: (IdClass a) => Parser s a Bool
-litBool = boolData . snd <$> token LitBool
+litBool = boolData . tokenData <$> token LitBool
 
 identifier :: (IdClass a) => a -> Parser s a Text
-identifier = (textData . snd <$>) . token . Identifier
+identifier = (textData . tokenData <$>) . token . Identifier
 
 anyIdentifier :: (IdClass a) => Parser s a (a, Text)
 anyIdentifier = fmap f . choice $ map (token . Identifier) [minBound .. maxBound]
   where
-    f (Identifier cls, TextData name) = (cls, name)
+    f (Identifier cls, (wspValue ^$) -> TextData name) = (cls, name)
     f _ = undefined
 
 tok :: (Eq a) => TokenType a -> Parser s a ()
 tok = (f <$>) . token
   where
-    f (_, NoData) = ()
+    f (_, (wspValue ^$) -> NoData) = ()
     f _ = undefined
 
 beginString :: (IdClass a) => Parser s a ()
@@ -71,7 +70,7 @@ endString :: (IdClass a) => Parser s a ()
 endString = tok EndString
 
 stringContent :: (IdClass a) => Parser s a Text
-stringContent = textData . snd <$> token StringContent
+stringContent = textData . tokenData <$> token StringContent
 
 beginInterp :: (IdClass a) => Parser s a ()
 beginInterp = tok BeginInterp
@@ -83,7 +82,7 @@ beginComment :: (IdClass a) => Parser s a ()
 beginComment = tok BeginComment
 
 commentContent :: (IdClass a) => Parser s a Text
-commentContent = textData . snd <$> token CommentContent
+commentContent = textData . tokenData <$> token CommentContent
 
 endComment :: (IdClass a) => Parser s a ()
 endComment = tok EndComment

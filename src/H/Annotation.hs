@@ -7,7 +7,7 @@ module H.Annotation
 
 import Control.Comonad.Trans.Store
 import Language.Haskell.TH
-import Text.Parsec.Applicative.Pos
+import Text.Parsec.Applicative.Types
 
 import H.Import
 import H.Annotation.Internal

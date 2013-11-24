@@ -6,6 +6,7 @@ module H.Lexer
   , digits
   , underscore
   , Token
+  , tokenData
   , TokenType(..)
   , TokenData(..)
   , IdClass
@@ -18,7 +19,8 @@ module H.Lexer
 
 import qualified Data.Map as M
 import qualified Data.Set as S
-import Text.Parsec.Applicative.Pos
+import Filesystem.Path.CurrentOS (encode)
+import Text.Parsec.Applicative hiding (Parser)
 import Text.Regex.Applicative
 
 import H.Common
@@ -54,7 +56,7 @@ tokenizeFile spec name xs = runStateT (file spec) i >>= \case
     | otherwise
       -> return xs
   where
-    i = emptyTokenizerState (encodeString name) xs
+    i = emptyTokenizerState (encode name) xs
 
 getCurMode :: (Applicative m, Monad m) => TokT n e m LexerMode
 getCurMode = curMode <$> access tsModeStack
@@ -67,14 +69,14 @@ skip = void $ getCurMode >>= withPos . skippable
 
 oneToken
   :: (Applicative m, Monad m, IdClass a)
-  => LexerSpec a -> TokT n e m (Maybe (Token a, SourcePos))
+  => LexerSpec a -> TokT n e m (Maybe (Token a))
 oneToken spec = do
   getCurMode >>= withPos . flip tok spec >>= \case
     Nothing -> return Nothing
-    Just ((x, as), pos) -> do
+    Just (((tt, td), as), pos) -> do
       void $ tsModeStack %= flip (foldl modeAction) as
       skip
-      return $ Just (x, pos)
+      return $ Just (tt, WithSourcePos td pos)
 
 withPos :: (Applicative m, Monad m) => Parser a -> TokT n e m (Maybe (a, SourcePos))
 withPos p = do

@@ -28,7 +28,7 @@ keywords =
 ident :: (IdClass a) => TokenParser a
 ident = keepMode . choice . map oneIdent . sIdentifiers
 
-oneIdent :: (IdClass a) => (a, Set Char, Set Char) -> Parser (Token a)
+oneIdent :: (IdClass a) => (a, Set Char, Set Char) -> Parser (RawToken a)
 oneIdent (cls, head, tail) =
   ((Identifier cls,) .)
   . (TextData .)

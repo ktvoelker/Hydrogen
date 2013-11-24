@@ -1,6 +1,7 @@
 
 module H.Util where
 
+import qualified Data.Map as M
 import qualified Data.Text as T
 
 import H.Import
@@ -139,4 +140,14 @@ headView (x : xs) = Just (x, xs)
 
 fst3 :: (a, b, c) -> a
 fst3 (x, _, _) = x
+
+unionWithM :: (Ord k, Monad m) => (a -> a -> m a) -> Map k a -> Map k a -> m (Map k a)
+unionWithM f a b =
+  liftM M.fromList
+    . sequence
+    . map (\(k, v) -> liftM (k,) v)
+    . M.toList
+    $ M.unionWith f' (M.map return a) (M.map return b)
+  where
+    f' mx my = mx >>= \x -> my >>= \y -> f x y
 

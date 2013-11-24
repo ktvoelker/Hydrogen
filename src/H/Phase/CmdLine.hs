@@ -10,7 +10,7 @@ import H.Common
 inputs :: Term [String]
 inputs =
   value
-  . posLeft 0 []
+  . posAny []
   $ posInfo { posName = "INPUT", posDoc = "Use these files as inputs" }
 
 showStageName :: (StageNames n) => n -> String
