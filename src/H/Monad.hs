@@ -75,7 +75,7 @@ instance (Functor m) => Functor (MT n e m) where
 
 instance (Functor m, Applicative m, Monad m) => Applicative (MT n e m) where
   pure = MT . return
-  (<*>) = liftA2 ($)
+  (MT a) <*> (MT b) = MT (a <*> b)
 
 instance (Applicative m, Monad m) => MonadError (Err e) (MT n e m) where
   throwError = MT . throwError . Left
