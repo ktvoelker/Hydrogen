@@ -16,6 +16,10 @@ module H.Monad
   , isArtifact
   , Unique()
   , nextUnique
+  , PrimId()
+  , primName
+  , primId
+  , primUnique
   , MT()
   , MonadM(..)
   , runMT

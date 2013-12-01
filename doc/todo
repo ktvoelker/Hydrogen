@@ -2,6 +2,14 @@
 TODO
 ====
 
+Add an option to RefGraph: it can throw an error when adding a reference to a missing
+node, rather than allowing it
+
+  This should be available through both the monadic interface and the plain one
+
+  In the monadic interface, require the underlying monad to be
+  MonadM, and throw the error
+
 Convert Lexer to use conduit
 
 Think about single-token interpolation more deeply

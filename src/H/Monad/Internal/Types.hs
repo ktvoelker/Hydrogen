@@ -11,17 +11,27 @@ import qualified Data.Set as S
 import H.Monad.Internal.Errors
 import H.Import
 
-data Unique =
-  Unique
-  { uUnique :: Integer
-  , uName   :: Text
-  } deriving (Show)
+newtype PrimId = PrimId { primName :: Text } deriving (Eq, Ord, Show)
+
+primId :: Text -> PrimId
+primId = PrimId
+
+data Unique = Prim PrimId | Unique Integer Text deriving (Show)
+
+primUnique :: PrimId -> Unique
+primUnique = Prim
 
 instance Eq Unique where
-  (==) = (==) `on` uUnique
+  (==) (Prim xs) (Prim ys) = xs == ys
+  (==) (Unique m _) (Unique n _) = m == n
+  (==) (Prim _) (Unique _ _) = False
+  (==) (Unique _ _) (Prim _) = False
 
 instance Ord Unique where
-  compare = comparing uUnique
+  compare (Prim xs) (Prim ys) = compare xs ys
+  compare (Unique m _) (Unique n _) = compare m n
+  compare (Prim _) (Unique _ _) = LT
+  compare (Unique _ _) (Prim _) = GT
 
 data MTState =
   MTState
