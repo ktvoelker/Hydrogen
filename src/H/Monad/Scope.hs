@@ -19,7 +19,11 @@ findInScopeMaybe :: (MonadReader (Map k v) m, Ord k) => k -> m (Maybe v)
 findInScopeMaybe = ($ ask) . liftM . M.lookup
 
 scope :: (MonadReader (Map k v) m, Ord k) => [(k, m v)] -> m a -> m a
-scope = undefined
+scope bs m = do
+  bs' <- mapM f bs
+  local (M.union . M.fromList $ bs') m
+  where
+    f (k, v) = liftM (k, ) v
 
 scope' :: (MonadReader (Map k v) m, Ord k) => (k -> m v) -> [k] -> m a -> m a
 scope' f ks = scope . zip ks . map f $ ks
