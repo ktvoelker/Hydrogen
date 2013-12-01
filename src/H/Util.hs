@@ -25,11 +25,17 @@ readMaybe = fmap fst . listToMaybe . reads
 whenJust :: (Monad m) => Maybe a -> (a -> m ()) -> m ()
 whenJust x f = maybe (return ()) f x
 
-mapFst :: (a -> c) -> (a, b) -> (c, b)
-mapFst f (a, b) = (f a, b)
+onFst :: (a -> c) -> (a, b) -> (c, b)
+onFst f (a, b) = (f a, b)
 
-mapSnd :: (b -> c) -> (a, b) -> (a, c)
-mapSnd f (a, b) = (a, f b)
+onSnd :: (b -> c) -> (a, b) -> (a, c)
+onSnd f (a, b) = (a, f b)
+
+onFstF :: (Functor f) => (a -> f c) -> (a, b) -> f (c, b)
+onFstF f (a, b) = (, b) <$> f a
+
+onSndF :: (Functor f) => (b -> f c) -> (a, b) -> f (a, c)
+onSndF f (a, b) = (a, ) <$> f b
 
 lift2 :: (MonadTrans t, MonadTrans u, Monad m, Monad (u m)) => m a -> t (u m) a
 lift2 = lift . lift

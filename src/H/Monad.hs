@@ -31,7 +31,7 @@ import H.Monad.Internal
 import H.Util
 
 newtype MT n e m a = MT { getMT :: MTInner n e m a }
-  
+
 fatal :: (MonadM m) => Err (LowerE m) -> m a
 fatal err = liftMT $ report err >> MT (throwError . Left $ err)
 
