@@ -21,6 +21,10 @@ data Unique = Prim PrimId | Unique Integer Text deriving (Show)
 primUnique :: PrimId -> Unique
 primUnique = Prim
 
+uniqueSourceName :: Unique -> Text
+uniqueSourceName (Unique _ xs) = xs
+uniqueSourceName (Prim id) = primName id
+
 instance Eq Unique where
   (==) (Prim xs) (Prim ys) = xs == ys
   (==) (Unique m _) (Unique n _) = m == n

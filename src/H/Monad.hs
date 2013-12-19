@@ -15,6 +15,7 @@ module H.Monad
   , writeResult
   , isArtifact
   , Unique()
+  , uniqueSourceName
   , nextUnique
   , PrimId()
   , primName
