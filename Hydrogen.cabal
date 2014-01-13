@@ -44,6 +44,7 @@ Library
     applicative-parsec
   exposed-modules:
     H.Annotation
+    H.Chan
     H.Common
     H.Common.IO
     H.Lexer
