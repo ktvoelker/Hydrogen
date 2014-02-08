@@ -46,8 +46,8 @@ report = liftMT . MT . tell . (: []) . ErrResult
 internal :: (MonadM m, Show a) => a -> m b
 internal = fatal . Err EInternal Nothing Nothing . Just . show
 
-log :: (MonadM m) => String -> m ()
-log = report . Err EOutput Nothing Nothing . Just
+log :: (MonadM m, MonadIO (LowerM m)) => Text -> m ()
+log xs = liftMT . MT $ gets _mtLogger >>= liftIO . ($ xs)
 
 dump :: (MonadM m) => String -> m ()
 dump = liftMT . MT . dump'

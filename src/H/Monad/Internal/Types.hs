@@ -7,6 +7,7 @@ module H.Monad.Internal.Types
 
 import Data.Lens.Template
 import qualified Data.Set as S
+import qualified Data.Text.IO as TIO
 
 import H.Monad.Internal.Errors
 import H.Import
@@ -40,9 +41,14 @@ instance Ord Unique where
 data MTState =
   MTState
   { _mtNextUnique :: Integer
-  } deriving (Show)
+  , _mtLogger     :: Text -> IO ()
+  }
 
-emptyMTState = MTState 0
+emptyMTState :: MTState
+emptyMTState = MTState 0 logStdErr
+
+logStdErr :: Text -> IO ()
+logStdErr = TIO.putStrLn
 
 class (Eq a, Ord a, Enum a, Bounded a, Show a) => StageNames a where
 
