@@ -2,6 +2,13 @@
 TODO
 ====
 
+Get rid of the complicated option parsing and phase system
+
+  Instead, just provide a simple primitive for terminating a pipeline early if there
+  are any errors, and another for terminating a pipeline early no matter what
+
+Make the internal module structure less confusing (mostly in the H.Monad space)
+
 Add an option to RefGraph: it can throw an error when adding a reference to a missing
 node, rather than allowing it
 
