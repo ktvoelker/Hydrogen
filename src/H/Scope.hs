@@ -13,7 +13,7 @@ runScopeT = flip runReaderT M.empty
 findInScope :: (MonadM m, MonadReader (Map k v) m, Ord k, Show k) => k -> m v
 findInScope name = join . (liftM $ maybe err return) . findInScopeMaybe $ name
   where
-    err = fatal $ Err ENotFound Nothing (Just $ show name) Nothing
+    err = fatal' $ Err ENotFound Nothing (Just $ show name) Nothing
 
 findInScopeMaybe :: (MonadReader (Map k v) m, Ord k) => k -> m (Maybe v)
 findInScopeMaybe = ($ ask) . liftM . M.lookup

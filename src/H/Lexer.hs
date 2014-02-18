@@ -40,36 +40,36 @@ digits = S.fromList ['0' .. '9']
 underscore = S.singleton '_'
 
 tokenize
-  :: (Applicative m, Monad m, IdClass a)
-  => LexerSpec a -> FileMap Text -> MT e m (FileMap (Tokens a))
+  :: (IdClass a)
+  => LexerSpec a -> FileMap Text -> MT (FileMap (Tokens a))
 tokenize = (sequence .) . (M.mapWithKey . tokenizeFile)
 
 tokenizeFile
-  :: (Applicative m, Monad m, IdClass a)
-   => LexerSpec a -> FilePath -> Text -> MT e m (Tokens a)
+  :: (IdClass a)
+   => LexerSpec a -> FilePath -> Text -> MT (Tokens a)
 tokenizeFile spec name xs = runStateT (file spec) i >>= \case
   (xs, ts)
     | not . null $ tsInput ^$ ts
-      -> fatal . Err ELexer Nothing Nothing . Just . show $ (tsSourcePos ^$ ts, xs)
+      -> fatal' . Err ELexer Nothing Nothing . Just . show $ (tsSourcePos ^$ ts, xs)
     | curMode (tsModeStack ^$ ts) /= LMNormal
-      -> fatal . Err ELexer Nothing Nothing . Just . show $ (tsModeStack ^$ ts, xs)
+      -> fatal' . Err ELexer Nothing Nothing . Just . show $ (tsModeStack ^$ ts, xs)
     | otherwise
       -> return xs
   where
     i = emptyTokenizerState (encode name) xs
 
-getCurMode :: (Applicative m, Monad m) => TokT e m LexerMode
+getCurMode :: TokT LexerMode
 getCurMode = curMode <$> access tsModeStack
 
-file :: (Applicative m, Monad m, IdClass a) => LexerSpec a -> TokT e m (Tokens a)
+file :: (IdClass a) => LexerSpec a -> TokT (Tokens a)
 file spec = skip >> (sequenceWhileJust . repeat) (oneToken spec)
 
-skip :: (Applicative m, Monad m) => TokT e m ()
+skip :: TokT ()
 skip = void $ getCurMode >>= withPos . skippable
 
 oneToken
-  :: (Applicative m, Monad m, IdClass a)
-  => LexerSpec a -> TokT e m (Maybe (Token a))
+  :: (IdClass a)
+  => LexerSpec a -> TokT (Maybe (Token a))
 oneToken spec = do
   getCurMode >>= withPos . flip tok spec >>= \case
     Nothing -> return Nothing
@@ -78,7 +78,7 @@ oneToken spec = do
       skip
       return $ Just (tt, WithSourcePos td pos)
 
-withPos :: (Applicative m, Monad m) => Parser a -> TokT e m (Maybe (a, SourcePos))
+withPos :: Parser a -> TokT (Maybe (a, SourcePos))
 withPos p = do
   pos <- access tsSourcePos
   findLongestPrefix (withMatched p) <$> access tsInput >>= \case

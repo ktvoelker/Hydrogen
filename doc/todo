@@ -2,12 +2,6 @@
 TODO
 ====
 
-Get rid of the writer except to track a Bool (whether there were any errors)
-
-  All errors get written out directly
-
-Make the internal module structure less confusing (mostly in the H.Monad space)
-
 Add an option to RefGraph: it can throw an error when adding a reference to a missing
 node, rather than allowing it
 

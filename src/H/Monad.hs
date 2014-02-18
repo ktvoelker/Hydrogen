@@ -3,15 +3,12 @@ module H.Monad
   ( ErrType(..)
   , Err(..)
   , fatal
+  , fatal'
   , report
+  , report'
+  , check
   , internal
   , log
-  , dump
-  , artifact
-  , Result(..)
-  , writeResults
-  , writeResult
-  , isArtifact
   , Unique()
   , uniqueSourceName
   , nextUnique
@@ -23,87 +20,53 @@ module H.Monad
   , MonadM(..)
   , runMT
   , execMT
-  , check
   ) where
 
 import System.IO
 
+import H.Error
 import H.Import
-import H.Monad.Errors
 import H.Monad.State
 import H.Monad.Types
 import H.Util
 
-fatal :: (MonadM m) => Err (LowerE m) -> m a
-fatal err = liftMT $ report err >> MT (throwError err)
+fatal :: (MonadM m, Show e) => Err e -> m a
+fatal = todo
 
-report :: (MonadM m) => Err (LowerE m) -> m ()
-report = liftMT . MT . tell . (: []) . ErrResult
+fatal' :: (MonadM m) => Err () -> m a
+fatal' = fatal
+
+report :: (MonadM m, Show e) => Err e -> m ()
+report = todo
+
+report' :: (MonadM m) => Err () -> m ()
+report' = report
+
+check :: (MonadM m) => m ()
+check = todo
 
 internal :: (MonadM m, Show a) => a -> m b
-internal = fatal . Err EInternal Nothing Nothing . Just . show
+internal = fatal' . Err EInternal Nothing Nothing . Just . show
 
-log :: (MonadM m, MonadIO (LowerM m)) => Text -> m ()
+log :: (MonadM m) => Text -> m ()
 log xs = liftMT . MT $ gets _mtLogger >>= liftIO . ($ xs)
 
-dump :: (Monad m) => String -> MT e m ()
-dump = tell . (: []) . DebugResult
+class (Functor m, Applicative m, Monad m) => MonadM m where
+  liftMT :: MT a -> m a
 
-artifact :: (MonadM m) => String -> String -> m ()
-artifact fp = liftMT . MT . tell . (: []) . ArtifactResult fp
-
-writeResults :: (Monad m, MonadIO m, Show e) => [Result e] -> m ExitCode
-writeResults = liftM mconcat . mapM writeResult
-
-writeResult :: (Monad m, MonadIO m, Show e) => Result e -> m ExitCode
-writeResult (ErrResult e) = liftIO (hPrint stderr e) >> return ExitFailure
-writeResult (DebugResult xs) = liftIO (hPutStrLn stderr xs) >> return ExitSuccess
-writeResult (ArtifactResult fp xs) = liftIO (writeFile fp xs) >> return ExitSuccess
-
-isArtifact :: Result e -> Bool
-isArtifact (ArtifactResult _ _) = True
-isArtifact _ = False
-
-class
-  ( Monad m
-  , Applicative m
-  , Functor m
-  , Monad (LowerM m)
-  , Applicative (LowerM m)
-  , Functor (LowerM m)
-  ) => MonadM m where
-  type LowerE (m :: * -> *) :: *
-  type LowerM (m :: * -> *) :: * -> *
-  liftMT :: MT (LowerE m) (LowerM m) a -> m a
-
-instance (Functor m, Applicative m, Monad m) => MonadM (MT e m) where
-  type LowerE (MT e m) = e
-  type LowerM (MT e m) = m
+instance MonadM MT where
   liftMT = id
 
 instance (MonadM m) => MonadM (ReaderT r m) where
-  type LowerE (ReaderT r m) = LowerE m
-  type LowerM (ReaderT r m) = LowerM m
   liftMT = lift . liftMT
 
 nextUnique :: (MonadM m) => Text -> m Unique
 nextUnique name =
   liftMT . MT $ Unique <$> (mtNextUnique %%= \u -> (u, u + 1)) <*> pure name
 
-runMT
-  :: (Monad m)
-  => MT e m a
-  -> m (Either (Err e) a, [Result e])
-runMT =
-  runWriterT
-  . flip evalStateT emptyMTState
-  . runErrorT
-  . unMT
+runMT :: MT a -> IO a
+runMT = flip evalStateT emptyMTState . unMT
 
-execMT :: (Monad m) => MT e m a -> m [Result e]
-execMT = liftM snd . runMT
-
--- Fail if any errors have occurred so far
-check :: (Monad m) => MT e m ()
-check = todo
+execMT :: MT a -> IO ()
+execMT = void . runMT
 

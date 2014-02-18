@@ -14,20 +14,20 @@ instance SourcePosEffect (Parser s a) where
   getSourcePos = getPosition
 
 parse
-  :: (Eq a, Applicative m, Monad m)
+  :: (Eq a)
   => Parser s a b
   -> FileMap (Tokens a)
-  -> MT e m (FileMap b)
+  -> MT (FileMap b)
 parse = (sequence .) . (M.mapWithKey . parseFile)
 
 parseFile
-  :: (Eq a, Applicative m, Monad m)
+  :: (Eq a)
   => Parser s a b
   -> FilePath
   -> Tokens a
-  -> MT e m b
+  -> MT b
 parseFile file _ xs = case P.parse file xs of
-  Left err -> fatal . Err EParser Nothing Nothing . Just . show $ err
+  Left err -> fatal' . Err EParser Nothing Nothing . Just . show $ err
   Right decl -> return decl
 
 delimit :: (IdClass a) => Text -> Text -> Parser s a b -> Parser s a b

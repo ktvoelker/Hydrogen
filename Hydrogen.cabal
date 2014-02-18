@@ -44,6 +44,7 @@ Library
     H.Chan
     H.Common
     H.Common.IO
+    H.Error
     H.Lexer
     H.Parser
     H.PrettyPrint
@@ -57,7 +58,6 @@ Library
     H.Lexer.Tokens
     H.Lexer.Types
     H.Monad
-    H.Monad.Errors
     H.Monad.State
     H.Monad.Types
     H.Monoids

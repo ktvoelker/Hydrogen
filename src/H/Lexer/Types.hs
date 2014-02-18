@@ -165,5 +165,5 @@ emptyTokenizerState name =
 
 makeLenses [''TokenizerState]
 
-type TokT e m = StateT TokenizerState (MT e m)
+type TokT = StateT TokenizerState MT
 
