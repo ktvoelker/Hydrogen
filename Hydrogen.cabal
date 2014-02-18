@@ -34,12 +34,10 @@ Library
     data-lens-template   >= 2.1  && < 2.2,
     template-haskell     >= 2.7  && < 2.9,
     pretty               >= 1.1  && < 1.2,
-    conduit,
-    system-filepath,
-    bytestring,
-    monad-control,
-    transformers-base,
-    regex-applicative,
+    conduit              >= 1.0  && < 1.1,
+    system-filepath      >= 0.4  && < 0.5,
+    bytestring           >= 0.10 && < 0.11,
+    regex-applicative    >= 0.3  && < 0.4,
     applicative-parsec
   exposed-modules:
     H.Annotation
