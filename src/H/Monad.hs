@@ -1,7 +1,6 @@
 
 module H.Monad
-  ( StageNames()
-  , ErrType(..)
+  ( ErrType(..)
   , Err(..)
   , fatal
   , report
@@ -9,7 +8,6 @@ module H.Monad
   , log
   , dump
   , artifact
-  , Options(..)
   , Result(..)
   , writeResults
   , writeResult
@@ -25,21 +23,19 @@ module H.Monad
   , MonadM(..)
   , runMT
   , execMT
-  , stage
+  , check
   ) where
 
-import qualified Data.Set as S
 import System.IO
 
 import H.Import
 import H.Monad.Errors
-import H.Monad.Stages
 import H.Monad.State
 import H.Monad.Types
 import H.Util
 
 fatal :: (MonadM m) => Err (LowerE m) -> m a
-fatal err = liftMT $ report err >> MT (throwError . Left $ err)
+fatal err = liftMT $ report err >> MT (throwError err)
 
 report :: (MonadM m) => Err (LowerE m) -> m ()
 report = liftMT . MT . tell . (: []) . ErrResult
@@ -50,17 +46,8 @@ internal = fatal . Err EInternal Nothing Nothing . Just . show
 log :: (MonadM m, MonadIO (LowerM m)) => Text -> m ()
 log xs = liftMT . MT $ gets _mtLogger >>= liftIO . ($ xs)
 
-dump :: (MonadM m) => String -> m ()
-dump = liftMT . MT . dump'
-
-dump' :: (Monad m) => String -> MTInner n e m ()
-dump' = tell . (: []) . DebugResult
-
-dumpResult' :: (Monad m, Show a) => MTInner n e m a -> MTInner n e m a
-dumpResult' m = do
-  r <- m
-  dump' . show $ r
-  return r
+dump :: (Monad m) => String -> MT e m ()
+dump = tell . (: []) . DebugResult
 
 artifact :: (MonadM m) => String -> String -> m ()
 artifact fp = liftMT . MT . tell . (: []) . ArtifactResult fp
@@ -77,10 +64,6 @@ isArtifact :: Result e -> Bool
 isArtifact (ArtifactResult _ _) = True
 isArtifact _ = False
 
-isDebug :: Result e -> Bool
-isDebug (DebugResult _) = True
-isDebug _ = False
-
 class
   ( Monad m
   , Applicative m
@@ -89,25 +72,16 @@ class
   , Applicative (LowerM m)
   , Functor (LowerM m)
   ) => MonadM m where
-  type LowerN (m :: * -> *) :: *
   type LowerE (m :: * -> *) :: *
   type LowerM (m :: * -> *) :: * -> *
-  liftMT :: MT (LowerN m) (LowerE m) (LowerM m) a -> m a
+  liftMT :: MT (LowerE m) (LowerM m) a -> m a
 
-instance (Functor m, Applicative m, Monad m) => MonadM (MT n e m) where
-  type LowerN (MT n e m) = n
-  type LowerE (MT n e m) = e
-  type LowerM (MT n e m) = m
+instance (Functor m, Applicative m, Monad m) => MonadM (MT e m) where
+  type LowerE (MT e m) = e
+  type LowerM (MT e m) = m
   liftMT = id
 
-instance (Functor m, Applicative m, Monad m) => MonadM (MTInner n e m) where
-  type LowerN (MTInner n e m) = n
-  type LowerE (MTInner n e m) = e
-  type LowerM (MTInner n e m) = m
-  liftMT (MT inner) = inner
-
 instance (MonadM m) => MonadM (ReaderT r m) where
-  type LowerN (ReaderT r m) = LowerN m
   type LowerE (ReaderT r m) = LowerE m
   type LowerM (ReaderT r m) = LowerM m
   liftMT = lift . liftMT
@@ -118,29 +92,18 @@ nextUnique name =
 
 runMT
   :: (Monad m)
-  => Options n
-  -> MT n e m a
-  -> m (Either (Either (Err e) (Finished n)) a, [Result e])
-runMT opts =
+  => MT e m a
+  -> m (Either (Err e) a, [Result e])
+runMT =
   runWriterT
   . flip evalStateT emptyMTState
   . runErrorT
-  . flip runReaderT opts
-  . getMTInner
-  . getMT
+  . unMT
 
-execMT :: (Monad m) => Options n -> MT n e m a -> m [Result e]
-execMT = (liftM snd .) . runMT
+execMT :: (Monad m) => MT e m a -> m [Result e]
+execMT = liftM snd . runMT
 
-stage
-  :: (Monad m, StageNames n, Show a)
-  => n
-  -> MT n e m a
-  -> MT n e m a
-stage name (MT m) = MT $ do
-  Options{..} <- ask
-  let c = if name `S.member` debugStages then id else filter (not . isDebug)
-  output <- censor c . dumpResult' $ m
-  when (Just name == finalStage) . throwError . Right . Finished $ name
-  return output
+-- Fail if any errors have occurred so far
+check :: (Monad m) => MT e m ()
+check = todo
 

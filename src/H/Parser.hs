@@ -17,7 +17,7 @@ parse
   :: (Eq a, Applicative m, Monad m)
   => Parser s a b
   -> FileMap (Tokens a)
-  -> MT n e m (FileMap b)
+  -> MT e m (FileMap b)
 parse = (sequence .) . (M.mapWithKey . parseFile)
 
 parseFile
@@ -25,7 +25,7 @@ parseFile
   => Parser s a b
   -> FilePath
   -> Tokens a
-  -> MT n e m b
+  -> MT e m b
 parseFile file _ xs = case P.parse file xs of
   Left err -> fatal . Err EParser Nothing Nothing . Just . show $ err
   Right decl -> return decl

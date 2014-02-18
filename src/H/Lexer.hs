@@ -41,12 +41,12 @@ underscore = S.singleton '_'
 
 tokenize
   :: (Applicative m, Monad m, IdClass a)
-  => LexerSpec a -> FileMap Text -> MT n e m (FileMap (Tokens a))
+  => LexerSpec a -> FileMap Text -> MT e m (FileMap (Tokens a))
 tokenize = (sequence .) . (M.mapWithKey . tokenizeFile)
 
 tokenizeFile
   :: (Applicative m, Monad m, IdClass a)
-   => LexerSpec a -> FilePath -> Text -> MT n e m (Tokens a)
+   => LexerSpec a -> FilePath -> Text -> MT e m (Tokens a)
 tokenizeFile spec name xs = runStateT (file spec) i >>= \case
   (xs, ts)
     | not . null $ tsInput ^$ ts
@@ -58,18 +58,18 @@ tokenizeFile spec name xs = runStateT (file spec) i >>= \case
   where
     i = emptyTokenizerState (encode name) xs
 
-getCurMode :: (Applicative m, Monad m) => TokT n e m LexerMode
+getCurMode :: (Applicative m, Monad m) => TokT e m LexerMode
 getCurMode = curMode <$> access tsModeStack
 
-file :: (Applicative m, Monad m, IdClass a) => LexerSpec a -> TokT n e m (Tokens a)
+file :: (Applicative m, Monad m, IdClass a) => LexerSpec a -> TokT e m (Tokens a)
 file spec = skip >> (sequenceWhileJust . repeat) (oneToken spec)
 
-skip :: (Applicative m, Monad m) => TokT n e m ()
+skip :: (Applicative m, Monad m) => TokT e m ()
 skip = void $ getCurMode >>= withPos . skippable
 
 oneToken
   :: (Applicative m, Monad m, IdClass a)
-  => LexerSpec a -> TokT n e m (Maybe (Token a))
+  => LexerSpec a -> TokT e m (Maybe (Token a))
 oneToken spec = do
   getCurMode >>= withPos . flip tok spec >>= \case
     Nothing -> return Nothing
@@ -78,7 +78,7 @@ oneToken spec = do
       skip
       return $ Just (tt, WithSourcePos td pos)
 
-withPos :: (Applicative m, Monad m) => Parser a -> TokT n e m (Maybe (a, SourcePos))
+withPos :: (Applicative m, Monad m) => Parser a -> TokT e m (Maybe (a, SourcePos))
 withPos p = do
   pos <- access tsSourcePos
   findLongestPrefix (withMatched p) <$> access tsInput >>= \case
