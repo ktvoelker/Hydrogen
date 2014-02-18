@@ -1,5 +1,5 @@
 
-module H.Monad.Internal.Errors where
+module H.Monad.Errors where
 
 import Text.Parsec.Applicative.Types
 

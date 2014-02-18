@@ -1,6 +1,6 @@
 
 {-# LANGUAGE TemplateHaskell #-}
-module H.Monad.RefGraph
+module H.RefGraph
   ( RefGraph()
   , emptyRefGraph
   , nodeLens

@@ -1,5 +1,5 @@
 
-module H.Monad.Scope where
+module H.Scope where
 
 import qualified Data.Map as M
 

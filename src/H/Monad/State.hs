@@ -1,15 +1,10 @@
 
 {-# LANGUAGE TemplateHaskell #-}
-module H.Monad.Internal.Types
-  ( module H.Monad.Internal.Errors
-  , module H.Monad.Internal.Types
-  ) where
+module H.Monad.State where
 
 import Data.Lens.Template
-import qualified Data.Set as S
 import qualified Data.Text.IO as TIO
 
-import H.Monad.Internal.Errors
 import H.Import
 
 newtype PrimId = PrimId { primName :: Text } deriving (Eq, Ord, Show)
@@ -49,20 +44,6 @@ emptyMTState = MTState 0 logStdErr
 
 logStdErr :: Text -> IO ()
 logStdErr = TIO.putStrLn
-
-class (Eq a, Ord a, Enum a, Bounded a, Show a) => StageNames a where
-
-data Options n =
-  Options
-  { finalStage  :: Maybe n
-  , debugStages :: S.Set n
-  } deriving (Eq, Ord, Show)
-
-data Result e =
-    ErrResult (Err e)
-  | DebugResult String
-  | ArtifactResult String String
-  deriving (Show)
 
 makeLenses [''MTState]
 

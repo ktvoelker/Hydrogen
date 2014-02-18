@@ -48,11 +48,11 @@ Library
     H.Common
     H.Common.IO
     H.Lexer
-    H.Monad.RefGraph
-    H.Monad.Scope
     H.Parser
     H.Phase
     H.PrettyPrint
+    H.RefGraph
+    H.Scope
   other-modules:
     H.Annotation.Demo
     H.Annotation.Internal
@@ -61,9 +61,10 @@ Library
     H.Lexer.Tokens
     H.Lexer.Types
     H.Monad
-    H.Monad.Internal
-    H.Monad.Internal.Errors
-    H.Monad.Internal.Types
+    H.Monad.Errors
+    H.Monad.Stages
+    H.Monad.State
+    H.Monad.Types
     H.Monoids
     H.Phase.CmdLine
     H.Util

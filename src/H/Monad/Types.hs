@@ -1,12 +1,17 @@
 
-module H.Monad.Internal
-  ( module H.Monad.Internal
-  , module H.Monad.Internal.Types
-  ) where
+module H.Monad.Types where
 
 import H.Import
-import H.Monad.Internal.Types
+import H.Monad.Errors
+import H.Monad.Stages
+import H.Monad.State
 import H.Util
+
+data Result e =
+    ErrResult (Err e)
+  | DebugResult String
+  | ArtifactResult String String
+  deriving (Show)
 
 type MTRaw n e m =
   ReaderT (Options n)
@@ -49,4 +54,34 @@ instance (Monad m) => MonadWriter [Result e] (MTInner n e m) where
   tell = MTInner . tell
   listen = MTInner . listen . getMTInner
   pass = MTInner . pass . getMTInner
+
+newtype MT n e m a = MT { getMT :: MTInner n e m a }
+
+instance (Functor m, Applicative m, Monad m) => Monad (MT n e m) where
+  return = pure
+  (MT m) >>= f = MT $ m >>= getMT . f
+  fail = MT . fail
+
+instance MonadTrans (MT n e) where
+  lift = MT . lift
+
+instance (Applicative m, MonadIO m) => MonadIO (MT n e m) where
+  liftIO = lift . liftIO
+
+instance (Functor m) => Functor (MT n e m) where
+  fmap f (MT m) = MT . fmap f $ m
+
+instance (Functor m, Applicative m, Monad m) => Applicative (MT n e m) where
+  pure = MT . return
+  (MT a) <*> (MT b) = MT (a <*> b)
+
+instance (Applicative m, Monad m) => MonadError (Err e) (MT n e m) where
+  throwError = MT . throwError . Left
+  catchError (MT m) h = MT $ catchError m $ \case
+    Left err -> getMT . h $ err
+    finished -> throwError finished
+
+instance (Applicative m, Monad m) => MonadWriter [Result e] (MT n e m) where
+  listen (MT m) = MT $ listen m
+  pass (MT m) = MT $ pass m
 

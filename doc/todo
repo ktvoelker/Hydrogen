@@ -7,6 +7,10 @@ Get rid of the complicated option parsing and phase system
   Instead, just provide a simple primitive for terminating a pipeline early if there
   are any errors, and another for terminating a pipeline early no matter what
 
+Get rid of the writer except to track a Bool (whether there were any errors)
+
+  All errors get written out directly
+
 Make the internal module structure less confusing (mostly in the H.Monad space)
 
 Add an option to RefGraph: it can throw an error when adding a reference to a missing

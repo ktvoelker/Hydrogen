@@ -32,10 +32,11 @@ import qualified Data.Set as S
 import System.IO
 
 import H.Import
-import H.Monad.Internal
+import H.Monad.Errors
+import H.Monad.Stages
+import H.Monad.State
+import H.Monad.Types
 import H.Util
-
-newtype MT n e m a = MT { getMT :: MTInner n e m a }
 
 fatal :: (MonadM m) => Err (LowerE m) -> m a
 fatal err = liftMT $ report err >> MT (throwError . Left $ err)
@@ -63,34 +64,6 @@ dumpResult' m = do
 
 artifact :: (MonadM m) => String -> String -> m ()
 artifact fp = liftMT . MT . tell . (: []) . ArtifactResult fp
-
-instance (Functor m, Applicative m, Monad m) => Monad (MT n e m) where
-  return = pure
-  (MT m) >>= f = MT $ m >>= getMT . f
-  fail = MT . fail
-
-instance MonadTrans (MT n e) where
-  lift = MT . lift
-
-instance (Applicative m, MonadIO m) => MonadIO (MT n e m) where
-  liftIO = lift . liftIO
-
-instance (Functor m) => Functor (MT n e m) where
-  fmap f (MT m) = MT . fmap f $ m
-
-instance (Functor m, Applicative m, Monad m) => Applicative (MT n e m) where
-  pure = MT . return
-  (MT a) <*> (MT b) = MT (a <*> b)
-
-instance (Applicative m, Monad m) => MonadError (Err e) (MT n e m) where
-  throwError = MT . throwError . Left
-  catchError (MT m) h = MT $ catchError m $ \case
-    Left err -> getMT . h $ err
-    finished -> throwError finished
-
-instance (Applicative m, Monad m) => MonadWriter [Result e] (MT n e m) where
-  listen (MT m) = MT $ listen m
-  pass (MT m) = MT $ pass m
 
 writeResults :: (Monad m, MonadIO m, Show e) => [Result e] -> m ExitCode
 writeResults = liftM mconcat . mapM writeResult
