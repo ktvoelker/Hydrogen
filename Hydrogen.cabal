@@ -80,6 +80,7 @@ Library
     ExplicitForAll
     ViewPatterns
     OverloadedStrings
+    DeriveDataTypeable
   other-extensions:
     TemplateHaskell
 

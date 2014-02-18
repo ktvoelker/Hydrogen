@@ -36,11 +36,12 @@ instance Ord Unique where
 data MTState =
   MTState
   { _mtNextUnique :: Integer
+  , _mtErrorCount :: Integer
   , _mtLogger     :: Text -> IO ()
   }
 
 emptyMTState :: MTState
-emptyMTState = MTState 0 logStdErr
+emptyMTState = MTState 0 0 logStdErr
 
 logStdErr :: Text -> IO ()
 logStdErr = TIO.putStrLn
