@@ -21,6 +21,12 @@ uniqueSourceName :: Unique -> Text
 uniqueSourceName (Unique _ xs) = xs
 uniqueSourceName (Prim id) = primName id
 
+class FromPrimId a where
+  fromPrimId :: PrimId -> a
+
+instance FromPrimId Unique where
+  fromPrimId = primUnique
+
 instance Eq Unique where
   (==) (Prim xs) (Prim ys) = xs == ys
   (==) (Unique m _) (Unique n _) = m == n

@@ -16,6 +16,7 @@ module H.Monad
   , primName
   , primId
   , primUnique
+  , FromPrimId(..)
   , MT()
   , MonadM(..)
   , runMT
@@ -64,6 +65,9 @@ check :: (MonadM m) => m ()
 check = getErrorCount >>= \case
   0 -> return ()
   _ -> abort
+
+checked :: (MonadM m) => m a -> m a
+checked = (<* check)
 
 internal :: (MonadM m, Show a) => a -> m b
 internal = fatal' . Err EInternal Nothing Nothing . Just . show
