@@ -7,6 +7,7 @@ module H.Monad
   , report
   , report'
   , check
+  , checked
   , internal
   , log
   , Unique()
