@@ -75,3 +75,5 @@ isCycle :: SCC a -> Bool
 isCycle (AcyclicSCC _) = False
 isCycle (CyclicSCC _)  = True
 
+deriving instance (Show a) => Show (SCC a)
+
