@@ -1,17 +1,17 @@
 
-name:           Hydrogen
-version:        0.0.1
+name:           hydrogen
+version:        0.0.0.1
 cabal-version:  >= 1.10
 build-type:     Simple
 license:        GPL-3
 license-file:   LICENSE.txt
 copyright:      (c) 2013 Karl Voelker
 author:         Karl Voelker
-maintainer:     ktvoelker@gmail.com
+maintainer:     hydrogen@karlv.net
 stability:      experimental
-bug-reports:    mailto:ktvoelker@gmail.com
-synopsis:       A language toolkit
-category:       Language
+bug-reports:    mailto:hydrogen@karlv.net
+synopsis:       A utility library and alternate Prelude
+category:       Prelude
 tested-with:    GHC == 7.6.3
 
 Library
@@ -28,38 +28,20 @@ Library
     containers           >= 0.4  && < 0.6,
     text                 >= 0.11 && < 0.12,
     mtl                  >= 2.1  && < 2.2,
-    comonad-transformers >= 3.0  && < 3.1,
     data-lens            >= 2.10 && < 2.11,
     data-lens-fd         >= 2.0  && < 2.1,
-    data-lens-template   >= 2.1  && < 2.2,
-    template-haskell     >= 2.7  && < 2.9,
     pretty               >= 1.1  && < 1.2,
     conduit              >= 1.0  && < 1.1,
     system-filepath      >= 0.4  && < 0.5,
-    bytestring           >= 0.10 && < 0.11,
-    regex-applicative    >= 0.3  && < 0.4,
-    applicative-parsec
+    bytestring           >= 0.10 && < 0.11
   exposed-modules:
-    H.Annotation
     H.Chan
     H.Common
     H.Common.IO
-    H.Error
-    H.Lexer
-    H.Parser
     H.PrettyPrint
-    H.RefGraph
-    H.Scope
   other-modules:
-    H.Annotation.Demo
-    H.Annotation.Internal
     H.Import
     H.Import.IO
-    H.Lexer.Tokens
-    H.Lexer.Types
-    H.Monad
-    H.Monad.State
-    H.Monad.Types
     H.Monoids
     H.Util
   default-extensions:
@@ -81,6 +63,4 @@ Library
     ViewPatterns
     OverloadedStrings
     DeriveDataTypeable
-  other-extensions:
-    TemplateHaskell
 
