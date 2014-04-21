@@ -1,0 +1,6 @@
+#!/bin/sh
+set -e
+OLD="$(git rev-parse HEAD)"
+git pull
+NEW="$(git rev-parse HEAD)"
+exec test "$OLD" = "$NEW"
