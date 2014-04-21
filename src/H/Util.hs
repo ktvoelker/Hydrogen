@@ -132,14 +132,6 @@ sequenceWhileJust [] = return []
 sequenceWhileJust (m : ms) =
   m >>= maybe (return []) (\x -> liftM (x :) $ sequenceWhileJust ms)
 
-isLeft :: Either a b -> Bool
-isLeft (Left _)  = True
-isLeft (Right _) = False
-
-isRight :: Either a b -> Bool
-isRight (Right _) = True
-isRight (Left _)  = False
-
 headView :: [a] -> Maybe (a, [a])
 headView [] = Nothing
 headView (x : xs) = Just (x, xs)
