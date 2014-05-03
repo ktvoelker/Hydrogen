@@ -3,8 +3,15 @@ module H.Util where
 
 import qualified Data.Map as M
 import qualified Data.Text as T
+import qualified "base" Prelude as P
 
 import H.Import
+
+show :: (Show a) => a -> Text
+show = T.pack . P.show
+
+read :: (Read a) => Text -> Maybe a
+read = fmap fst . listToMaybe . P.reads . T.unpack
 
 data ExitCode = ExitSuccess | ExitFailure deriving (Eq, Ord, Enum, Bounded, Read, Show)
 
@@ -16,11 +23,11 @@ instance Monoid ExitCode where
 todo :: a
 todo = error "Not implemented"
 
-impossible :: String -> a
-impossible = error . ("Impossible: " ++)
+error :: Text -> a
+error = P.error . T.unpack
 
-readMaybe :: (Read a) => String -> Maybe a
-readMaybe = fmap fst . listToMaybe . reads
+impossible :: Text -> a
+impossible = error . ("Impossible: " <>)
 
 whenJust :: (Monad m) => Maybe a -> (a -> m ()) -> m ()
 whenJust x f = maybe (return ()) f x
@@ -83,7 +90,7 @@ appendElem :: a -> AppendList a -> AppendList a
 appendElem x (AppendList f) = AppendList $ f . (x :)
 
 appendList :: [a] -> AppendList a -> AppendList a
-appendList xs (AppendList f) = AppendList $ f . (xs ++)
+appendList xs (AppendList f) = AppendList $ f . (xs <>)
 
 realizeList :: AppendList a -> [a]
 realizeList (AppendList f) = f []
@@ -121,9 +128,6 @@ eitherAlt :: (Alternative f) => f a -> f b -> f (Either a b)
 eitherAlt la ra = (Left <$> la) <|> (Right <$> ra)
 
 infixl 3 `eitherAlt`
-
-showText :: (Show a) => a -> T.Text
-showText = T.pack . show
  
 type FileMap a = Map FilePath a
 
@@ -143,7 +147,7 @@ unionWithM :: (Ord k, Monad m) => (a -> a -> m a) -> Map k a -> Map k a -> m (Ma
 unionWithM f a b =
   liftM M.fromList
     . sequence
-    . map (\(k, v) -> liftM (k,) v)
+    . fmap (\(k, v) -> liftM (k,) v)
     . M.toList
     $ M.unionWith f' (M.map return a) (M.map return b)
   where

@@ -1,6 +1,6 @@
 
 name:           hydrogen
-version:        0.0.0.1
+version:        0.1.0.0
 cabal-version:  >= 1.10
 build-type:     Simple
 license:        GPL-3
@@ -33,7 +33,8 @@ Library
     pretty               >= 1.1  && < 1.2,
     conduit              >= 1.0  && < 1.1,
     system-filepath      >= 0.4  && < 0.5,
-    bytestring           >= 0.10 && < 0.11
+    bytestring           >= 0.10 && < 0.11,
+    monoid-subclasses    >= 0.3  && < 0.4
   exposed-modules:
     H.Chan
     H.Common
@@ -42,9 +43,9 @@ Library
   other-modules:
     H.Import
     H.Import.IO
-    H.Monoids
     H.Util
   default-extensions:
+    PackageImports
     NoImplicitPrelude
     TupleSections
     LambdaCase

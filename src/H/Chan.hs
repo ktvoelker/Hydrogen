@@ -14,6 +14,7 @@ module H.Chan
 import qualified Control.Concurrent.Chan as C
 
 import H.Common
+import H.Common.IO
 
 newtype ReadChan a = ReadChan (IO a)
 

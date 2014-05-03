@@ -7,7 +7,8 @@ module H.Import
   , module Control.Monad.Identity
   , module Control.Monad.Reader
   , module Control.Monad.State
-  , module Control.Monad.Writer
+  , module Data.Bool
+  , module Data.ByteString
   , module Data.Char
   , module Data.Either
   , module Data.Function
@@ -16,42 +17,47 @@ module H.Import
   , module Data.Map
   , module Data.Maybe
   , module Data.Monoid
+  , module Data.Monoid.Factorial
+  , module Data.Monoid.Null
   , module Data.Ord
   , module Data.Ratio
   , module Data.Set
   , module Data.Text
+  , module Data.Text.Encoding
   , module Data.Traversable
   , module Filesystem.Path.CurrentOS
-  , module GHC.Real
   , module Prelude
   ) where
 
 import Control.Applicative
 import Control.Category
-import Control.Monad hiding (forM, mapM, sequence)
-import Control.Monad.Error hiding (forM, mapM, sequence)
-import Control.Monad.Identity hiding (forM, mapM, sequence)
-import Control.Monad.Reader hiding (forM, mapM, sequence)
-import Control.Monad.State hiding (forM, mapM, sequence)
-import Control.Monad.Writer hiding (forM, mapM, sequence)
+import Control.Monad hiding (forM, mapM, mapM_, sequence)
+import Control.Monad.Error hiding (forM, mapM, mapM_, sequence)
+import Control.Monad.Identity hiding (forM, mapM, mapM_, sequence)
+import Control.Monad.Reader hiding (forM, mapM, mapM_, sequence)
+import Control.Monad.State hiding (forM, mapM, mapM_, sequence)
+import Data.Bool
+import Data.ByteString (ByteString)
 import Data.Char
 import Data.Either
 import Data.Function hiding (id, (.))
 import Data.Lens
-import Data.List hiding (mapAccumL, mapAccumR, find, insert, union, stripPrefix)
+import Data.List (filter)
 import Data.Map (Map())
 import Data.Maybe
 import Data.Monoid
+import Data.Monoid.Factorial hiding (mapM, mapM_)
+import Data.Monoid.Null
 import Data.Ord
 import Data.Ratio
 import Data.Set (Set())
-import Data.Text (Text())
+import Data.Text (Text(), pack, unpack)
+import Data.Text.Encoding (encodeUtf8, decodeUtf8)
 import Data.Traversable
 import Filesystem.Path.CurrentOS hiding (append, concat, encode, decode, null, empty)
-import GHC.Real
-import Prelude hiding
-  ( (.), id, log, mapM, sequence
-  , FilePath, readFile, writeFile, putStr, putStrLn, readLn, getContents, getChar
-  , userError
+import "base" Prelude
+  ( Num(..), Integral(..), Fractional(..), Real(..), RealFrac(..)
+  , Int, Integer, Rational, Eq(..), Enum(..), Bounded(..)
+  , undefined, Show(), Read(), fst, snd
   )
 

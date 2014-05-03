@@ -4,7 +4,7 @@ module H.PrettyPrint
   , module H.PrettyPrint
   ) where
 
-import qualified Data.Text as T
+import qualified "base" Prelude as P
 import qualified Text.PrettyPrint as PP
 import Text.PrettyPrint hiding
   ( text, ptext, sizedText, zeroWidthText
@@ -13,27 +13,27 @@ import Text.PrettyPrint hiding
 
 import H.Common
 
-text :: T.Text -> Doc
-text = PP.text . T.unpack
+text :: Text -> Doc
+text = PP.text . unpack
 
-sizedText :: Int -> T.Text -> Doc
-sizedText n = PP.sizedText n . T.unpack
+sizedText :: Int -> Text -> Doc
+sizedText n = PP.sizedText n . unpack
 
-zeroWidthText :: T.Text -> Doc
-zeroWidthText = PP.zeroWidthText . T.unpack
+zeroWidthText :: Text -> Doc
+zeroWidthText = PP.zeroWidthText . unpack
 
-render :: Doc -> T.Text
-render = T.pack . PP.render
+render :: Doc -> Text
+render = pack . PP.render
 
-renderStyle :: Style -> Doc -> T.Text
-renderStyle s = T.pack . PP.renderStyle s
+renderStyle :: Style -> Doc -> Text
+renderStyle s = pack . PP.renderStyle s
 
-fullRender :: Mode -> Int -> Float -> (TextDetails -> a -> a) -> a -> Doc -> a
+fullRender :: Mode -> Int -> P.Float -> (TextDetails -> a -> a) -> a -> Doc -> a
 fullRender m ll rl f end doc = PP.fullRender m ll rl f' end doc
   where
     f' (PP.Chr c)   = f (Chr c)
-    f' (PP.Str xs)  = f (Str . T.pack $ xs)
-    f' (PP.PStr xs) = f (Str . T.pack $ xs)
+    f' (PP.Str xs)  = f (Str . pack $ xs)
+    f' (PP.PStr xs) = f (Str . pack $ xs)
 
-data TextDetails = Chr !Char | Str T.Text
+data TextDetails = Chr !Char | Str Text
 
