@@ -1,7 +1,7 @@
 
-module H.Common.IO
-  ( module H.Common.IO
-  , module H.Import.IO
+module H.IO
+  ( module H.Import.IO
+  , module H.IO
   ) where
 
 import qualified Data.Conduit.Binary as CB

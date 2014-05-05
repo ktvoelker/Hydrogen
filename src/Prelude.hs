@@ -1,7 +1,7 @@
 
 module Prelude
-  ( module H.Common
+  ( module H.Prelude
   ) where
 
-import H.Common
+import H.Prelude
 

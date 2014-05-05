@@ -37,9 +37,11 @@ Library
     monoid-subclasses    >= 0.3  && < 0.4
   exposed-modules:
     H.Chan
-    H.Common
-    H.Common.IO
-    H.PrettyPrint
+    H.Generic
+    H.IO
+    H.Prelude
+    H.Pretty
+    Prelude
   other-modules:
     H.Import
     H.Import.IO

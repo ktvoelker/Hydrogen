@@ -1,7 +1,7 @@
 
-module H.PrettyPrint
+module H.Pretty
   ( module Text.PrettyPrint
-  , module H.PrettyPrint
+  , module H.Pretty
   ) where
 
 import qualified "base" Prelude as P
@@ -11,7 +11,7 @@ import Text.PrettyPrint hiding
   , render, renderStyle, fullRender, TextDetails(..)
   )
 
-import H.Common
+import H.Prelude
 
 text :: Text -> Doc
 text = PP.text . unpack

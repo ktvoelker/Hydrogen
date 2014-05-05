@@ -1,5 +1,5 @@
 
-module H.Common
+module H.Prelude
   ( module H.Import
   , module H.Util
   ) where
