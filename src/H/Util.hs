@@ -1,6 +1,7 @@
 
 module H.Util where
 
+import qualified Control.Monad.Error as E
 import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified "base" Prelude as P
@@ -81,30 +82,35 @@ modifyM = (>>= put) . (get >>=)
 
 infixr 4 %>>=
 
-newtype AppendList a = AppendList ([a] -> [a])
+newtype ListBuilder a = ListBuilder { unListBuilder :: [a] -> [a] }
 
-emptyAppendList :: AppendList a
-emptyAppendList = AppendList id
+instance Monoid (ListBuilder a) where
+  mempty = ListBuilder id
+  mappend (ListBuilder f) (ListBuilder g) = ListBuilder $ f . g
+  mconcat = ListBuilder . foldr (.) id . fmap unListBuilder
 
-appendElem :: a -> AppendList a -> AppendList a
-appendElem x (AppendList f) = AppendList $ f . (x :)
+emptyListBuilder :: ListBuilder a
+emptyListBuilder = mempty
 
-appendList :: [a] -> AppendList a -> AppendList a
-appendList xs (AppendList f) = AppendList $ f . (xs <>)
+buildElem :: a -> ListBuilder a
+buildElem x = ListBuilder (x :)
 
-realizeList :: AppendList a -> [a]
-realizeList (AppendList f) = f []
+buildList :: [a] -> ListBuilder a
+buildList xs = ListBuilder (xs <>)
+
+finishList :: ListBuilder a -> [a]
+finishList (ListBuilder f) = f []
 
 -- | Get a list of all possible splits of the input list, where the element at each
 -- | position is treated as a pivot (not included in either side of the split).
 splits :: [a] -> [([a], [a])]
-splits = f emptyAppendList emptyAppendList
+splits = f emptyListBuilder emptyListBuilder
   where
-    f acc _ [] = realizeList acc
+    f acc _ [] = finishList acc
     f acc h (t : ts) = f acc' h' ts
       where
-        h' = appendElem t h
-        acc' = appendElem (realizeList h, ts) acc
+        h' = buildElem t <> h
+        acc' = buildElem (finishList h, ts) <> acc
 
 minimumByM :: (Monad m) => (a -> a -> m Ordering) -> [a] -> m a
 minimumByM _ [] = error "minimumByM: Empty list"
@@ -152,4 +158,7 @@ unionWithM f a b =
     $ M.unionWith f' (M.map return a) (M.map return b)
   where
     f' mx my = mx >>= \x -> my >>= \y -> f x y
+
+textMsg :: (Error a) => Text -> a
+textMsg = E.strMsg . unpack
 

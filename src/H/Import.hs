@@ -11,6 +11,7 @@ module H.Import
   , module Data.ByteString
   , module Data.Char
   , module Data.Either
+  , module Data.Foldable
   , module Data.Function
   , module Data.Lens
   , module Data.List
@@ -31,22 +32,28 @@ module H.Import
 
 import Control.Applicative
 import Control.Category
-import Control.Monad hiding (forM, mapM, mapM_, sequence)
-import Control.Monad.Error hiding (forM, mapM, mapM_, sequence)
-import Control.Monad.Identity hiding (forM, mapM, mapM_, sequence)
-import Control.Monad.Reader hiding (forM, mapM, mapM_, sequence)
-import Control.Monad.State hiding (forM, mapM, mapM_, sequence)
+import Control.Monad hiding
+  ( forM, forM_, mapM, mapM_, sequence, sequence_, msum )
+import Control.Monad.Error hiding
+  ( forM, forM_, mapM, mapM_, sequence, sequence_, msum, strMsg )
+import Control.Monad.Identity hiding
+  ( forM, forM_, mapM, mapM_, sequence, sequence_, msum )
+import Control.Monad.Reader hiding
+  ( forM, forM_, mapM, mapM_, sequence, sequence_, msum )
+import Control.Monad.State hiding
+  ( forM, forM_, mapM, mapM_, sequence, sequence_, msum )
 import Data.Bool
 import Data.ByteString (ByteString)
 import Data.Char
 import Data.Either
+import Data.Foldable
 import Data.Function hiding (id, (.))
 import Data.Lens
 import Data.List (filter)
 import Data.Map (Map())
 import Data.Maybe
 import Data.Monoid
-import Data.Monoid.Factorial hiding (mapM, mapM_)
+import Data.Monoid.Factorial hiding (mapM, mapM_, foldl, foldl', foldr, foldMap)
 import Data.Monoid.Null
 import Data.Ord
 import Data.Ratio
@@ -58,6 +65,6 @@ import Filesystem.Path.CurrentOS hiding (append, concat, encode, decode, null, e
 import "base" Prelude
   ( Num(..), Integral(..), Fractional(..), Real(..), RealFrac(..)
   , Int, Integer, Rational, Eq(..), Enum(..), Bounded(..)
-  , undefined, Show(), Read(), fst, snd
+  , undefined, Show(), Read(), fst, snd, asTypeOf
   )
 

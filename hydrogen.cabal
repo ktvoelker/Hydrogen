@@ -41,6 +41,7 @@ Library
     H.IO
     H.Prelude
     H.Pretty
+    H.StringMethods
     Prelude
   other-modules:
     H.Import
