@@ -37,18 +37,14 @@ Library
     monoid-subclasses    >= 0.3  && < 0.4
   exposed-modules:
     H.Chan
-    H.Generic
     H.IO
     H.Prelude
     H.Pretty
-    H.StringMethods
-    Prelude
   other-modules:
     H.Import
     H.Import.IO
     H.Util
   default-extensions:
-    PackageImports
     NoImplicitPrelude
     TupleSections
     LambdaCase

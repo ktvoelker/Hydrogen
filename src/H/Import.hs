@@ -62,7 +62,7 @@ import Data.Text (Text(), pack, unpack)
 import Data.Text.Encoding (encodeUtf8, decodeUtf8)
 import Data.Traversable
 import Filesystem.Path.CurrentOS hiding (append, concat, encode, decode, null, empty)
-import "base" Prelude
+import Prelude
   ( Num(..), Integral(..), Fractional(..), Real(..), RealFrac(..)
   , Int, Integer, Rational, Eq(..), Enum(..), Bounded(..)
   , undefined, Show(), Read(), fst, snd, asTypeOf

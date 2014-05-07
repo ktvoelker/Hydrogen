@@ -4,7 +4,7 @@ module H.Pretty
   , module H.Pretty
   ) where
 
-import qualified "base" Prelude as P
+import qualified Prelude as P
 import qualified Text.PrettyPrint as PP
 import Text.PrettyPrint hiding
   ( text, ptext, sizedText, zeroWidthText

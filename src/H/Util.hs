@@ -4,7 +4,7 @@ module H.Util where
 import qualified Control.Monad.Error as E
 import qualified Data.Map as M
 import qualified Data.Text as T
-import qualified "base" Prelude as P
+import qualified Prelude as P
 
 import H.Import
 
