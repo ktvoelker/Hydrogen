@@ -66,5 +66,6 @@ import "base" Prelude
   ( Num(..), Integral(..), Fractional(..), Real(..), RealFrac(..)
   , Int, Integer, Rational, Eq(..), Enum(..), Bounded(..)
   , undefined, Show(), Read(), fst, snd, asTypeOf
+  , (^)
   )
 
