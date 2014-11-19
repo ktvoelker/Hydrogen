@@ -12,7 +12,7 @@ stability:      experimental
 bug-reports:    mailto:hydrogen@karlv.net
 synopsis:       A utility library and alternate Prelude
 category:       Prelude
-tested-with:    GHC == 7.8.1
+tested-with:    GHC == 7.8.3
 
 Library
   default-language: Haskell2010
@@ -24,17 +24,19 @@ Library
     -fno-warn-missing-signatures
     -fno-warn-orphans
   build-depends:
-    base                 >= 4.7  && < 5,
-    containers           >= 0.4  && < 0.6,
-    text                 >= 0.11 && < 0.12,
-    mtl                  >= 2.1  && < 2.2,
-    data-lens            >= 2.10 && < 2.11,
-    data-lens-fd         >= 2.0  && < 2.1,
-    pretty               >= 1.1  && < 1.2,
-    conduit              >= 1.0  && < 1.1,
-    system-filepath      >= 0.4  && < 0.5,
-    bytestring           >= 0.10 && < 0.11,
-    monoid-subclasses    >= 0.3  && < 0.4
+    base,
+    containers,
+    text,
+    mtl,
+    data-lens,
+    data-lens-fd,
+    pretty,
+    conduit,
+    conduit-extra,
+    resourcet,
+    system-filepath,
+    bytestring,
+    monoid-subclasses
   exposed-modules:
     H.Chan
     H.IO
