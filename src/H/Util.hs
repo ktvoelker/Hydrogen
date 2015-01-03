@@ -14,13 +14,6 @@ show = T.pack . P.show
 read :: (Read a) => Text -> Maybe a
 read = fmap fst . listToMaybe . P.reads . T.unpack
 
-data ExitCode = ExitSuccess | ExitFailure deriving (Eq, Ord, Enum, Bounded, Read, Show)
-
-instance Monoid ExitCode where
-  mempty = ExitSuccess
-  mappend ExitSuccess ExitSuccess = ExitSuccess
-  mappend _ _ = ExitFailure
-
 todo :: a
 todo = error "Not implemented"
 
@@ -77,11 +70,6 @@ lift4 = lift . lift . lift . lift
 modifyM :: (MonadState s m) => (s -> m s) -> m ()
 modifyM = (>>= put) . (get >>=) 
 
-(%>>=) :: (MonadState a m) => Lens a b -> (b -> m b) -> m b
-(%>>=) lens f = access lens >>= f >>= (lens ~=)
-
-infixr 4 %>>=
-
 newtype ListBuilder a = ListBuilder { unListBuilder :: [a] -> [a] }
 
 instance Monoid (ListBuilder a) where
@@ -134,8 +122,6 @@ eitherAlt :: (Alternative f) => f a -> f b -> f (Either a b)
 eitherAlt la ra = (Left <$> la) <|> (Right <$> ra)
 
 infixl 3 `eitherAlt`
- 
-type FileMap a = Map FilePath a
 
 sequenceWhileJust :: (Monad m) => [m (Maybe a)] -> m [a]
 sequenceWhileJust [] = return []
@@ -161,4 +147,9 @@ unionWithM f a b =
 
 textMsg :: (Error a) => Text -> a
 textMsg = E.strMsg . unpack
+
+whenM :: (Monad m) => m Bool -> m () -> m ()
+whenM cond m = cond >>= \case
+  True  -> m
+  False -> return ()
 

@@ -1,6 +1,6 @@
 
 name:           hydrogen
-version:        0.1.0.0
+version:        0.2.0.0
 cabal-version:  >= 1.10
 build-type:     Simple
 license:        GPL-3
@@ -28,15 +28,8 @@ Library
     containers,
     text,
     mtl,
-    data-lens,
-    data-lens-fd,
     pretty,
-    conduit,
-    conduit-extra,
-    resourcet,
-    system-filepath,
-    bytestring,
-    monoid-subclasses
+    bytestring
   exposed-modules:
     H.Chan
     H.IO
