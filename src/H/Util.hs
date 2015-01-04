@@ -23,6 +23,7 @@ error = P.error . T.unpack
 impossible :: Text -> a
 impossible = error . ("Impossible: " <>)
 
+-- | If the input is Just, do a monadic action on the value
 whenJust :: (Monad m) => Maybe a -> (a -> m ()) -> m ()
 whenJust x f = maybe (return ()) f x
 
@@ -67,39 +68,11 @@ lift4
   -> w (v (t (u m))) a
 lift4 = lift . lift . lift . lift
 
-modifyM :: (MonadState s m) => (s -> m s) -> m ()
-modifyM = (>>= put) . (get >>=) 
+-- | Modify the state of a StateT using a monadic action of the inner monad.
+modifyM :: (Monad m) => (s -> m s) -> StateT s m ()
+modifyM = (>>= put) . (get >>=) . (lift .)
 
-newtype ListBuilder a = ListBuilder { unListBuilder :: [a] -> [a] }
-
-instance Monoid (ListBuilder a) where
-  mempty = ListBuilder id
-  mappend (ListBuilder f) (ListBuilder g) = ListBuilder $ f . g
-  mconcat = ListBuilder . foldr (.) id . fmap unListBuilder
-
-emptyListBuilder :: ListBuilder a
-emptyListBuilder = mempty
-
-buildElem :: a -> ListBuilder a
-buildElem x = ListBuilder (x :)
-
-buildList :: [a] -> ListBuilder a
-buildList xs = ListBuilder (xs <>)
-
-finishList :: ListBuilder a -> [a]
-finishList (ListBuilder f) = f []
-
--- | Get a list of all possible splits of the input list, where the element at each
--- | position is treated as a pivot (not included in either side of the split).
-splits :: [a] -> [([a], [a])]
-splits = f emptyListBuilder emptyListBuilder
-  where
-    f acc _ [] = finishList acc
-    f acc h (t : ts) = f acc' h' ts
-      where
-        h' = buildElem t <> h
-        acc' = buildElem (finishList h, ts) <> acc
-
+-- | Find the minimum element of a list using a monadic comparison action.
 minimumByM :: (Monad m) => (a -> a -> m Ordering) -> [a] -> m a
 minimumByM _ [] = error "minimumByM: Empty list"
 minimumByM c (x : xs) = f x c xs
@@ -118,23 +91,37 @@ asProxied = const
 
 infix 8 `asProxied`
 
+-- | Like <|>, but the operands may have different value types, with Either providing
+-- a union of those two types in the result
 eitherAlt :: (Alternative f) => f a -> f b -> f (Either a b)
 eitherAlt la ra = (Left <$> la) <|> (Right <$> ra)
 
 infixl 3 `eitherAlt`
 
+-- | Sequence a list of actions that return Maybes, stopping at the first Nothing
 sequenceWhileJust :: (Monad m) => [m (Maybe a)] -> m [a]
 sequenceWhileJust [] = return []
 sequenceWhileJust (m : ms) =
   m >>= maybe (return []) (\x -> liftM (x :) $ sequenceWhileJust ms)
 
+-- | Deconstruct a list into its head and tail
 headView :: [a] -> Maybe (a, [a])
 headView [] = Nothing
 headView (x : xs) = Just (x, xs)
 
+-- | Get the first element of a triple
 fst3 :: (a, b, c) -> a
 fst3 (x, _, _) = x
 
+-- | Get the second element of a triple
+snd3 :: (a, b, c) -> b
+snd3 (_, x, _) = x
+
+-- | Get the third element of a triple
+thd3 :: (a, b, c) -> c
+thd3 (_, _, x) = x
+
+-- | Union two maps, with a monadic action for merging duplicates
 unionWithM :: (Ord k, Monad m) => (a -> a -> m a) -> Map k a -> Map k a -> m (Map k a)
 unionWithM f a b =
   liftM M.fromList
@@ -145,9 +132,11 @@ unionWithM f a b =
   where
     f' mx my = mx >>= \x -> my >>= \y -> f x y
 
+-- | Create an error from a message
 textMsg :: (Error a) => Text -> a
 textMsg = E.strMsg . unpack
 
+-- | Like when, but the condition is also a monadic action
 whenM :: (Monad m) => m Bool -> m () -> m ()
 whenM cond m = cond >>= \case
   True  -> m
