@@ -1,7 +1,0 @@
-#!/bin/sh
-set -ex
-if [ ! -f cabal.sandbox.config ]; then
-  cabal sandbox init
-fi
-cabal install
-sh -x ./gen-www

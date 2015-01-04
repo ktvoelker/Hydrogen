@@ -1,7 +1,0 @@
-#!/bin/sh
-# This script is deliberately not in -e mode, because failure to poll should not
-# trigger a build.
-OLD="$(git rev-parse HEAD)"
-git fetch && git reset --hard '@{upstream}'
-NEW="$(git rev-parse HEAD)"
-exec test "$OLD" = "$NEW"

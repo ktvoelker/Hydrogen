@@ -1,8 +1,0 @@
-.*.sw*
-/cabal-dev/
-/dist/
-/Setup.hs
-/update
-/www
-/www.old
-/www.new
