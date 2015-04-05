@@ -23,7 +23,7 @@ description:
   To use this package, use the `NoImplicitPrelude` language option, and import
   "H.Prelude".
 category:       Prelude
-tested-with:    GHC == 7.8.3, GHC == 7.10.0.20141222
+tested-with:    GHC == 7.10.1
 
 Source-repository head
   type: git
