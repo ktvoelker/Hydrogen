@@ -2,7 +2,9 @@
 module H.Util where
 
 import qualified Data.Map as M
+import qualified Data.Set as S
 import qualified Data.Text as T
+import Debug.Trace
 import qualified Prelude as P
 
 import H.Import
@@ -137,3 +139,32 @@ whenM cond m = cond >>= \case
   True  -> m
   False -> return ()
 
+traceVal :: (Show a) => a -> a
+traceVal x = traceShow x x
+
+setCatMaybes :: (Ord a) => Set (Maybe a) -> Set a
+setCatMaybes = S.minView >>> \case
+  Nothing      -> S.empty
+  Just (x, xs) -> maybe id S.insert x $ setCatMaybes xs
+
+setSequence :: (Ord a, Applicative f) => Set (f a) -> f (Set a)
+setSequence = S.minView >>> \case
+  Nothing      -> pure S.empty
+  Just (x, xs) -> S.insert <$> x <*> setSequence xs
+
+onLeft :: (a -> c) -> Either a b -> Either c b
+onLeft f = \case
+  Left x  -> Left $ f x
+  Right y -> Right y
+
+onRight :: (b -> c) -> Either a b -> Either a c
+onRight f = \case
+  Left x  -> Left x
+  Right y -> Right $ f y
+
+whenJustM :: (Monad m) => m (Maybe a) -> (a -> m ()) -> m ()
+whenJustM m f = m >>= maybe (return ()) f
+
+boolToMaybe :: Bool -> Maybe ()
+boolToMaybe False = Nothing
+boolToMaybe True = Just ()

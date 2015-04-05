@@ -23,6 +23,8 @@ module H.Import
   , module Data.Text
   , module Data.Text.Encoding
   , module Data.Traversable
+  , module Data.Tuple
+  , module Debug.Trace
   , module Prelude
   ) where
 
@@ -44,7 +46,7 @@ import Data.Char
 import Data.Either
 import Data.Foldable
 import Data.Function hiding (id, (.))
-import Data.List (filter)
+import Data.List (filter, map)
 import Data.Map (Map())
 import Data.Maybe
 import Data.Monoid
@@ -54,6 +56,8 @@ import Data.Set (Set())
 import Data.Text (Text(), pack, unpack)
 import Data.Text.Encoding (encodeUtf8, decodeUtf8)
 import Data.Traversable
+import Data.Tuple (uncurry, curry, swap)
+import Debug.Trace
 import Prelude
   ( Num(..), Integral(..), Fractional(..), Real(..), RealFrac(..)
   , Int, Integer, Rational, Eq(..), Enum(..), Bounded(..)
