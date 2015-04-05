@@ -3,7 +3,7 @@ module H.Import
   ( module Control.Applicative
   , module Control.Category
   , module Control.Monad
-  , module Control.Monad.Error
+  , module Control.Monad.Except
   , module Control.Monad.Identity
   , module Control.Monad.Reader
   , module Control.Monad.State
@@ -30,8 +30,8 @@ import Control.Applicative
 import Control.Category
 import Control.Monad hiding
   ( forM, forM_, mapM, mapM_, sequence, sequence_, msum )
-import Control.Monad.Error hiding
-  ( forM, forM_, mapM, mapM_, sequence, sequence_, msum, strMsg )
+import Control.Monad.Except hiding
+  ( forM, forM_, mapM, mapM_, sequence, sequence_, msum )
 import Control.Monad.Identity hiding
   ( forM, forM_, mapM, mapM_, sequence, sequence_, msum )
 import Control.Monad.Reader hiding

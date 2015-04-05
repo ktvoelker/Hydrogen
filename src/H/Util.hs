@@ -1,7 +1,6 @@
 
 module H.Util where
 
-import qualified Control.Monad.Error as E
 import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Prelude as P
@@ -131,10 +130,6 @@ unionWithM f a b =
     $ M.unionWith f' (M.map return a) (M.map return b)
   where
     f' mx my = mx >>= \x -> my >>= \y -> f x y
-
--- | Create an error from a message
-textMsg :: (Error a) => Text -> a
-textMsg = E.strMsg . unpack
 
 -- | Like when, but the condition is also a monadic action
 whenM :: (Monad m) => m Bool -> m () -> m ()
