@@ -79,7 +79,7 @@ Test-Suite test
     base       >= 4.7  && < 4.9,
     containers >= 0.5  && < 0.6,
     mtl        >= 2.1  && < 2.3,
-    QuickCheck >= 2.7  && < 2.8,
+    QuickCheck >= 2.8  && < 2.9,
     Cabal      >= 1.10 && < 1.23,
     hydrogen
   default-extensions:
