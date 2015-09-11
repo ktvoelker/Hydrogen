@@ -8,8 +8,8 @@ module H.IO
 import Data.Text.IO (putStr, putStrLn)
 import qualified System.Environment as E
 
-import H.Import
 import H.Import.IO
+import H.Prelude
 
 getArgs :: (MonadIO m) => m [Text]
 getArgs = liftM (fmap pack) $ liftIO E.getArgs

@@ -1,5 +1,5 @@
 name:           hydrogen
-version:        0.3.0.0
+version:        0.4.0.0
 cabal-version:  >= 1.10
 build-type:     Simple
 license:        GPL-3
@@ -23,15 +23,11 @@ description:
   To use this package, use the `NoImplicitPrelude` language option, and import
   "H.Prelude".
 category:       Prelude
-tested-with:    GHC == 7.10.1
+tested-with:    GHC == 7.10.2
 
 Source-repository head
   type: git
   location: https://github.com/ktvoelker/hydrogen.git
-
-Flag dev
-  Description: Enable developer mode
-  Default: False
 
 Library
   default-language: Haskell2010
@@ -39,9 +35,6 @@ Library
   ghc-options:
     -Wall
     -fno-warn-name-shadowing
-  if flag(dev)
-    ghc-options:
-      -Werror
   build-depends:
     base       >= 4.7  && < 4.9,
     bytestring >= 0.10 && < 0.11,
@@ -53,16 +46,21 @@ Library
     H.Chan
     H.IO
     H.Prelude
+    H.Prelude.Aggregates
+    H.Prelude.Core
+    H.Prelude.Debug
+    H.Prelude.Monad
+    H.Prelude.Monads
+    H.Prelude.Num
+    H.Prelude.Text
     H.Pretty
   other-modules:
-    H.Import
     H.Import.IO
-    H.Util
   default-extensions:
-    NoImplicitPrelude
-    TupleSections
     LambdaCase
+    NoImplicitPrelude
     OverloadedStrings
+    TupleSections
 
 Test-Suite test
   type: exitcode-stdio-1.0
@@ -72,20 +70,17 @@ Test-Suite test
   ghc-options:
     -Wall
     -fno-warn-name-shadowing
-  if flag(dev)
-    ghc-options:
-      -Werror
   build-depends:
+    Cabal      >= 1.10 && < 1.23,
+    QuickCheck >= 2.8  && < 2.9,
     base       >= 4.7  && < 4.9,
     containers >= 0.5  && < 0.6,
     mtl        >= 2.1  && < 2.3,
-    QuickCheck >= 2.8  && < 2.9,
-    Cabal      >= 1.10 && < 1.23,
     hydrogen
   default-extensions:
-    NoImplicitPrelude
-    TupleSections
     LambdaCase
+    NoImplicitPrelude
     OverloadedStrings
     TemplateHaskell
+    TupleSections
 
