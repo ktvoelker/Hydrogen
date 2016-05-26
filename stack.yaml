@@ -1,7 +1,4 @@
-flags:
-  hydrogen:
-    dev: false
 packages:
 - '.'
 extra-deps: []
-resolver: lts-3.4
+resolver: lts-6.0
