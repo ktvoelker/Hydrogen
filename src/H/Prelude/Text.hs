@@ -17,10 +17,11 @@ import Prelude (Read(), Show())
 import qualified Prelude as P
 
 import H.Prelude.Core
-import H.Prelude.Monad
 
 read :: (Read a) => Text -> Maybe a
-read = fmap fst . listToMaybe . P.reads . unpack
+read = unpack >>> P.reads >>> \case
+  [(x, "")] -> Just x
+  _         -> Nothing
 
 show :: (Show a) => a -> Text
 show = pack . P.show
