@@ -10,7 +10,7 @@ module H.Prelude.Aggregates
   ) where
 
 import Data.Foldable
-import Data.List (filter, map)
+import Data.List (filter, iterate, map, takeWhile)
 import Data.Map (Map())
 import qualified Data.Map as M
 import Data.Monoid
