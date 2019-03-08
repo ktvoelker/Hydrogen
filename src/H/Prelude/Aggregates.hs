@@ -5,6 +5,7 @@ module H.Prelude.Aggregates
   , module Data.Traversable
   , module Data.List
   , module Data.Map
+  , module Data.Semigroup
   , module Data.Set
   , headView, unionWithM, setCatMaybes, setSequence
   ) where
@@ -14,6 +15,7 @@ import Data.List (filter, iterate, map, takeWhile)
 import Data.Map (Map())
 import qualified Data.Map as M
 import Data.Monoid
+import Data.Semigroup (Semigroup(..))
 import Data.Set (Set())
 import qualified Data.Set as S
 import Data.Traversable
