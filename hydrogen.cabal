@@ -70,7 +70,7 @@ Test-Suite test
     -Wall
     -fno-warn-name-shadowing
   build-depends:
-    QuickCheck >= 2.8  && < 2.13,
+    QuickCheck >= 2.8  && < 2.14,
     base       >= 4.7  && < 4.13,
     containers >= 0.5  && < 0.7,
     mtl        >= 2.1  && < 2.3,
